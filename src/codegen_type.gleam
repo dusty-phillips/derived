@@ -85,7 +85,8 @@ fn parse_loop(
 ) -> List(CodegenType) {
   case tokens {
     [#(token.CommentDoc(docstring), start), ..tokens] -> {
-      case parse_documented(tokens, docstring, start) {
+      let #(tokens, docstring) = parse_docstring(tokens, docstring)
+      case parse_documented_if_codegen_type(tokens, docstring, start) {
         Error(tokens) -> parse_loop(tokens, codegen_types)
         Ok(#(tokens, custom_type)) ->
           parse_loop(tokens, list.prepend(codegen_types, custom_type))
@@ -98,32 +99,25 @@ fn parse_loop(
 
 /// Parse a documented entity, returning it only if the wrapped entity is a custom type
 /// with a !codegen_type() entry.
-fn parse_documented(
+fn parse_documented_if_codegen_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
 ) -> ParseResult(CodegenType) {
-  case tokens {
-    [] -> Error(tokens)
-    [#(token.CommentDoc(new_docstring), _), ..tokens] ->
-      parse_documented(tokens, docstring <> new_docstring, docstring_start)
-    tokens -> {
-      case extract_codegen_module(docstring) {
-        Ok(codegen_module) ->
-          maybe_parse_custom_type(
-            tokens,
-            docstring,
-            docstring_start,
-            codegen_module,
-          )
-        Error(Nil) -> Error(tokens)
-      }
-    }
+  case extract_codegen_module(docstring) {
+    Ok(codegen_module) ->
+      maybe_parse_codegen_type(
+        tokens,
+        docstring,
+        docstring_start,
+        codegen_module,
+      )
+    Error(Nil) -> Error(tokens)
   }
 }
 
 /// Parse an entity that may be a CustomType or may be something else
-fn maybe_parse_custom_type(
+fn maybe_parse_codegen_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
@@ -183,6 +177,17 @@ fn parse_variant(
   name: String,
 ) -> ParseResult(Variant) {
   todo
+}
+
+fn parse_docstring(
+  tokens: List(PositionToken),
+  docstring: String,
+) -> #(List(PositionToken), String) {
+  case tokens {
+    [#(token.CommentDoc(new_docstring), _), ..tokens] ->
+      parse_docstring(tokens, docstring <> new_docstring)
+    tokens -> #(tokens, docstring)
+  }
 }
 
 type PositionToken =
