@@ -430,3 +430,44 @@ pub fn parse_variant_with_nested_tuple_field_test() {
       ),
     ]
 }
+
+pub fn parse_variant_with_function_field_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    Foo(fn(Int, String) -> Bool)
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 77),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            "",
+            [
+              codegen_type.UnlabelledField(
+                codegen_type.FunctionType(
+                  [
+                    codegen_type.NamedType("Int", option.None, []),
+                    codegen_type.NamedType("String", option.None, []),
+                  ],
+                  codegen_type.NamedType("Bool", option.None, []),
+                ),
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
+}

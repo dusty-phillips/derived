@@ -302,6 +302,23 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
       )
       Ok(TokenResponse(tokens, TupleType(tuple_elements |> list.reverse)))
     }
+    [#(token.Fn, _), #(token.LeftParen, _), ..tokens] -> {
+      use TokenResponse(tokens, parameters) <- result.try(
+        parse_function_parameters(tokens, []),
+      )
+      case tokens {
+        [#(token.RightArrow, _), ..tokens] -> {
+          use TokenResponse(tokens, return_type) <- result.try(
+            parse_field_type(tokens),
+          )
+          Ok(TokenResponse(
+            tokens,
+            FunctionType(parameters |> list.reverse, return_type),
+          ))
+        }
+        _ -> Error(TokenResponse(tokens, UnexpectedToken))
+      }
+    }
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
     tokens -> todo
   }
@@ -321,6 +338,24 @@ fn parse_tuple_elements(
     tokens -> {
       use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
       parse_tuple_elements(tokens, [field_type, ..reversed_elements])
+    }
+  }
+}
+
+fn parse_function_parameters(
+  tokens: List(PositionToken),
+  reversed_parameters: List(FieldType),
+) -> ParseResult(List(FieldType)) {
+  case tokens {
+    [#(token.RightParen, _), ..tokens] -> {
+      Ok(TokenResponse(tokens, reversed_parameters))
+    }
+    [#(token.Comma, _), ..tokens] -> {
+      parse_function_parameters(tokens, reversed_parameters)
+    }
+    tokens -> {
+      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
+      parse_function_parameters(tokens, [field_type, ..reversed_parameters])
     }
   }
 }
