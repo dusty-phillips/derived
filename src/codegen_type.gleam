@@ -296,8 +296,32 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> todo
     [#(token.UpperName(name), _), ..tokens] ->
       Ok(TokenResponse(tokens, NamedType(name, option.None, [])))
+    [#(token.Hash, _), #(token.LeftParen, _), ..tokens] -> {
+      use TokenResponse(tokens, tuple_elements) <- result.try(
+        parse_tuple_elements(tokens, []),
+      )
+      Ok(TokenResponse(tokens, TupleType(tuple_elements |> list.reverse)))
+    }
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
     tokens -> todo
+  }
+}
+
+fn parse_tuple_elements(
+  tokens: List(PositionToken),
+  reversed_elements: List(FieldType),
+) -> ParseResult(List(FieldType)) {
+  case tokens {
+    [#(token.RightParen, _), ..tokens] -> {
+      Ok(TokenResponse(tokens, reversed_elements))
+    }
+    [#(token.Comma, _), ..tokens] -> {
+      parse_tuple_elements(tokens, reversed_elements)
+    }
+    tokens -> {
+      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
+      parse_tuple_elements(tokens, [field_type, ..reversed_elements])
+    }
   }
 }
 
