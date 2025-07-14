@@ -69,7 +69,7 @@ pub type Field {
 
 pub type Attribute {
   Target(target: Target)
-  Deprecated
+  Deprecated(reason: String)
   Internal
 }
 
@@ -216,25 +216,34 @@ fn parse_maybe_documented_variant(
   tokens: List(PositionToken),
 ) -> ParseResult(Variant) {
   case tokens {
-    [#(token.UpperName(_), _), ..] -> parse_variant(tokens, "")
+    [#(token.At, _), ..] -> parse_variant_definition(tokens, "", [])
+    [#(token.UpperName(_), _), ..] -> parse_variant(tokens, "", [])
     [#(token.CommentDoc(docstring), _), ..tokens] -> {
       let #(tokens, docstring) = parse_docstring(tokens, docstring)
-      parse_variant_definition(tokens, docstring)
+      parse_variant_definition(tokens, docstring, [])
     }
-    _ -> todo
+    _ -> Error(TokenResponse(tokens, UnexpectedToken))
   }
 }
 
 fn parse_variant_definition(
   tokens: List(PositionToken),
   docstring: String,
+  attributes: List(Attribute),
 ) -> ParseResult(Variant) {
-  parse_variant(tokens, docstring)
+  case tokens {
+    [#(token.At, _), ..tokens] -> {
+      use TokenResponse(tokens, attribute) <- result.try(parse_attribute(tokens))
+      parse_variant_definition(tokens, docstring, [attribute, ..attributes])
+    }
+    tokens -> parse_variant(tokens, docstring, attributes |> list.reverse)
+  }
 }
 
 fn parse_variant(
   tokens: List(PositionToken),
   docstring: String,
+  attributes: List(Attribute),
 ) -> ParseResult(Variant) {
   case tokens {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> {
@@ -244,17 +253,17 @@ fn parse_variant(
           name: name,
           docstring: docstring,
           fields: reversed_fields |> list.reverse,
-          attributes: [],
+          attributes: attributes,
         )
       })
     }
     [#(token.UpperName(name), _), ..tokens] -> {
       Ok(TokenResponse(
         tokens,
-        Variant(name:, docstring:, fields: [], attributes: []),
+        Variant(name:, docstring:, fields: [], attributes:),
       ))
     }
-    _ -> todo
+    _ -> Error(TokenResponse(tokens, UnexpectedToken))
   }
 }
 
@@ -423,6 +432,29 @@ fn parse_type_parameter_names(
 fn parse_parameter_name(tokens: List(PositionToken)) -> ParseResult(String) {
   case tokens {
     [#(token.Name(name), _), ..tokens] -> Ok(TokenResponse(tokens, name))
+    tokens -> Error(TokenResponse(tokens, UnexpectedToken))
+  }
+}
+
+fn parse_attribute(tokens: List(PositionToken)) -> ParseResult(Attribute) {
+  case tokens {
+    [#(token.Name("deprecated"), _), #(token.LeftParen, _), #(token.String(reason), _), #(token.RightParen, _), ..tokens] ->
+      Ok(TokenResponse(tokens, Deprecated(reason)))
+    [#(token.Name("internal"), _), ..tokens] ->
+      Ok(TokenResponse(tokens, Internal))
+    [
+      #(token.Name("target"), _),
+      #(token.LeftParen, _),
+      #(token.Name(target), _),
+      #(token.RightParen, _),
+      ..tokens
+    ] -> {
+      case target {
+        "erlang" -> Ok(TokenResponse(tokens, Target(Erlang)))
+        "javascript" -> Ok(TokenResponse(tokens, Target(Javascript)))
+        _ -> Error(TokenResponse(tokens, UnexpectedToken))
+      }
+    }
     tokens -> Error(TokenResponse(tokens, UnexpectedToken))
   }
 }

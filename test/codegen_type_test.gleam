@@ -747,3 +747,32 @@ pub fn parse_parameterized_type_test() {
       ),
     ]
 }
+
+pub fn parse_variant_with_deprecated_attribute_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    @deprecated(\"use baz instead\")
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 87),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant("Bar", "", [], [
+            codegen_type.Deprecated("use baz instead"),
+          ]),
+        ]),
+        "foobar",
+      ),
+    ]
+}
