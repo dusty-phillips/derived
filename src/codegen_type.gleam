@@ -15,8 +15,8 @@ pub fn parse(input: String) -> List(CodegenType) {
 
   input
   |> glexer.new()
+  |> glexer.discard_whitespace()
   |> glexer.lex()
-  |> list.filter(is_non_space_token)
   |> echo
   |> parse_loop([])
   |> list.reverse
@@ -53,8 +53,8 @@ pub type Variant {
 }
 
 pub type Field {
-  LabelledField(item: DocumentedType, label: String)
-  UnlabelledField(item: DocumentedType)
+  LabelledField(field_type: FieldType, label: String)
+  UnlabelledField(field_type: FieldType)
 }
 
 pub type Attribute {
@@ -66,10 +66,6 @@ pub type Attribute {
 pub type Target {
   Erlang
   Javascript
-}
-
-pub type DocumentedType {
-  Documented(docstring: String, type_: FieldType)
 }
 
 pub type FieldType {
@@ -197,20 +193,62 @@ fn parse_variant(
   docstring: String,
 ) -> ParseResult(Variant) {
   case tokens {
+    [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> {
+      use #(tokens, reversed_fields) <- result.try(parse_fields(tokens, []))
+      Ok(#(
+        tokens,
+        Variant(
+          name:,
+          docstring:,
+          fields: reversed_fields |> list.reverse,
+          attributes: [],
+        ),
+      ))
+    }
     [#(token.UpperName(name), _), ..tokens] -> {
-      case parse_fields(tokens) {
-        Ok(#(tokens, fields)) -> todo
-        Error(tokens) ->
-          Ok(#(tokens, Variant(name:, docstring:, fields: [], attributes: [])))
-      }
+      Ok(#(tokens, Variant(name:, docstring:, fields: [], attributes: [])))
     }
     _ -> todo
   }
 }
 
-fn parse_fields(tokens: List(PositionToken)) -> ParseResult(Variant) {
+fn parse_fields(
+  tokens: List(PositionToken),
+  reversed_fields: List(Field),
+) -> ParseResult(List(Field)) {
   case tokens {
-    _ -> Error(tokens)
+    [#(token.RightParen, _), ..tokens] -> {
+      Ok(#(tokens, reversed_fields))
+    }
+    [#(token.Comma, _), ..tokens] -> {
+      parse_fields(tokens, reversed_fields)
+    }
+    tokens -> {
+      case parse_field(tokens) {
+        Error(tokens) -> parse_fields(tokens, reversed_fields)
+        Ok(#(tokens, field)) -> parse_fields(tokens, [field, ..reversed_fields])
+      }
+    }
+  }
+}
+
+fn parse_field(tokens: List(PositionToken)) -> ParseResult(Field) {
+  case tokens {
+    [#(token.UpperName(name), _), ..] ->
+      case parse_field_type(tokens) {
+        Ok(#(tokens, field_type)) -> Ok(#(tokens, UnlabelledField(field_type)))
+        Error(tokens) -> Error(tokens)
+      }
+    tokens -> Error(tokens)
+  }
+}
+
+fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
+  case tokens {
+    [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> todo
+    [#(token.UpperName(name), _), ..tokens] ->
+      Ok(#(tokens, NamedType(name, option.None, [])))
+    tokens -> Error(tokens)
   }
 }
 
@@ -244,12 +282,5 @@ fn extract_codegen_module(string: String) -> Result(String, Nil) {
       panic as {
         "Unexpected regexp match parsing " <> string <> " for !codegen_type"
       }
-  }
-}
-
-fn is_non_space_token(token: PositionToken) -> Bool {
-  case token {
-    #(token.Space(_), _) -> False
-    _ -> True
   }
 }

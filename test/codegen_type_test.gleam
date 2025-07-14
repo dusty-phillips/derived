@@ -1,8 +1,10 @@
 import codegen_type
+import gleam/option
 import gleeunit
 
 pub fn main() -> Nil {
   gleeunit.main()
+  // parse_single_variant_with_explicit_empty_parens_test()
 }
 
 pub fn ignore_undocumented_tokens_test() {
@@ -164,6 +166,110 @@ pub fn parse_multiple_empty_variants_with_docstring_test() {
         codegen_type.Type("Foo", [], [
           codegen_type.Variant("Foo", " A Foo does foo things", [], []),
           codegen_type.Variant("Bar", " A Bar does bar things", [], []),
+        ]),
+        "foobar",
+      ),
+    ]
+}
+
+// This test is for legal gleam syntax that shouldn't normally happen becaues
+// the formatter would remove the parens
+pub fn parse_single_variant_with_explicit_empty_parens_test() {
+  let custom_types =
+    "
+    /// !codegen_type(foobar)
+    type Foo {
+      Foo()
+    }
+    "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 62),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Foo", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_variant_with_unlabellled_field_test() {
+  let custom_types =
+    "
+    /// !codegen_type(foobar)
+    type Foo {
+      /// A Foo does foo things
+      Foo(String)
+    }
+    "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 100),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            " A Foo does foo things",
+            [
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("String", option.None, []),
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_variant_with_multiple_unlabellled_field_test() {
+  let custom_types =
+    "
+    /// !codegen_type(foobar)
+    type Foo {
+      /// A Foo does foo things
+      Foo(String, Int, Bool)
+    }
+    "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 111),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            " A Foo does foo things",
+            [
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("String", option.None, []),
+              ),
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("Int", option.None, []),
+              ),
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("Bool", option.None, []),
+              ),
+            ],
+            [],
+          ),
         ]),
         "foobar",
       ),
