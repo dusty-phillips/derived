@@ -297,7 +297,10 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
       use TokenResponse(tokens, parameters) <- result.try(
         parse_type_parameters(tokens, []),
       )
-      Ok(TokenResponse(tokens, NamedType(name, option.None, parameters |> list.reverse)))
+      Ok(TokenResponse(
+        tokens,
+        NamedType(name, option.None, parameters |> list.reverse),
+      ))
     }
     [#(token.UpperName(name), _), ..tokens] ->
       Ok(TokenResponse(tokens, NamedType(name, option.None, [])))
@@ -313,9 +316,9 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
       )
       case tokens {
         [#(token.RightArrow, _), ..tokens] -> {
-          use TokenResponse(tokens, return_type) <- result.try(
-            parse_field_type(tokens),
-          )
+          use TokenResponse(tokens, return_type) <- result.try(parse_field_type(
+            tokens,
+          ))
           Ok(TokenResponse(
             tokens,
             FunctionType(parameters |> list.reverse, return_type),
@@ -324,10 +327,15 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
         _ -> Error(TokenResponse(tokens, UnexpectedToken))
       }
     }
-    [#(token.Name(module), _), #(token.Dot, _), #(token.UpperName(name), _), ..tokens] ->
-      Ok(TokenResponse(tokens, NamedType(name, option.Some(module), [])))
+    [
+      #(token.Name(module), _),
+      #(token.Dot, _),
+      #(token.UpperName(name), _),
+      ..tokens
+    ] -> Ok(TokenResponse(tokens, NamedType(name, option.Some(module), [])))
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
-    [#(token.Name(_), _), ..] -> todo // VariableType - requires parameterized type support
+    [#(token.Name(_), _), ..] -> todo
+    // VariableType - requires parameterized type support
     tokens -> todo
   }
 }
@@ -336,54 +344,36 @@ fn parse_tuple_elements(
   tokens: List(PositionToken),
   reversed_elements: List(FieldType),
 ) -> ParseResult(List(FieldType)) {
-  case tokens {
-    [#(token.RightParen, _), ..tokens] -> {
-      Ok(TokenResponse(tokens, reversed_elements))
-    }
-    [#(token.Comma, _), ..tokens] -> {
-      parse_tuple_elements(tokens, reversed_elements)
-    }
-    tokens -> {
-      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
-      parse_tuple_elements(tokens, [field_type, ..reversed_elements])
-    }
-  }
+  parse_comma_separated(
+    tokens,
+    token.RightParen,
+    parse_field_type,
+    reversed_elements,
+  )
 }
 
 fn parse_function_parameters(
   tokens: List(PositionToken),
   reversed_parameters: List(FieldType),
 ) -> ParseResult(List(FieldType)) {
-  case tokens {
-    [#(token.RightParen, _), ..tokens] -> {
-      Ok(TokenResponse(tokens, reversed_parameters))
-    }
-    [#(token.Comma, _), ..tokens] -> {
-      parse_function_parameters(tokens, reversed_parameters)
-    }
-    tokens -> {
-      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
-      parse_function_parameters(tokens, [field_type, ..reversed_parameters])
-    }
-  }
+  parse_comma_separated(
+    tokens,
+    token.RightParen,
+    parse_field_type,
+    reversed_parameters,
+  )
 }
 
 fn parse_type_parameters(
   tokens: List(PositionToken),
   reversed_parameters: List(FieldType),
 ) -> ParseResult(List(FieldType)) {
-  case tokens {
-    [#(token.RightParen, _), ..tokens] -> {
-      Ok(TokenResponse(tokens, reversed_parameters))
-    }
-    [#(token.Comma, _), ..tokens] -> {
-      parse_type_parameters(tokens, reversed_parameters)
-    }
-    tokens -> {
-      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
-      parse_type_parameters(tokens, [field_type, ..reversed_parameters])
-    }
-  }
+  parse_comma_separated(
+    tokens,
+    token.RightParen,
+    parse_field_type,
+    reversed_parameters,
+  )
 }
 
 fn parse_docstring(
@@ -394,6 +384,26 @@ fn parse_docstring(
     [#(token.CommentDoc(new_docstring), _), ..tokens] ->
       parse_docstring(tokens, docstring <> new_docstring)
     tokens -> #(tokens, docstring)
+  }
+}
+
+fn parse_comma_separated(
+  tokens: List(PositionToken),
+  terminator: token.Token,
+  parser: fn(List(PositionToken)) -> ParseResult(a),
+  reversed_items: List(a),
+) -> ParseResult(List(a)) {
+  case tokens {
+    [#(tok, _), ..tokens] if tok == terminator -> {
+      Ok(TokenResponse(tokens, reversed_items))
+    }
+    [#(token.Comma, _), ..tokens] -> {
+      parse_comma_separated(tokens, terminator, parser, reversed_items)
+    }
+    tokens -> {
+      use TokenResponse(tokens, item) <- result.try(parser(tokens))
+      parse_comma_separated(tokens, terminator, parser, [item, ..reversed_items])
+    }
   }
 }
 
