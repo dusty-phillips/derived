@@ -1,4 +1,6 @@
 import glance
+import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{type Option}
 import gleam/regexp
@@ -20,6 +22,14 @@ pub fn parse(input: String) -> List(CodegenType) {
   |> echo
   |> parse_loop([])
   |> list.reverse
+}
+
+pub type ParseError {
+  /// Encountered an unexpected token while parsing a codegen_type
+  UnexpectedToken
+  /// Encountered an unexpected token in a place where unknown tokens
+  /// are expected (e.g. while parsing a function)
+  IgnoredToken
 }
 
 pub type CodegenType {
@@ -83,9 +93,23 @@ fn parse_loop(
     [#(token.CommentDoc(docstring), start), ..tokens] -> {
       let #(tokens, docstring) = parse_docstring(tokens, docstring)
       case parse_documented_if_codegen_type(tokens, docstring, start) {
-        Error(tokens) -> parse_loop(tokens, codegen_types)
-        Ok(#(tokens, custom_type)) ->
+        Ok(TokenResponse(tokens, custom_type)) ->
           parse_loop(tokens, list.prepend(codegen_types, custom_type))
+        Error(TokenResponse(tokens, IgnoredToken)) ->
+          parse_loop(tokens, codegen_types)
+        Error(TokenResponse([], UnexpectedToken)) -> {
+          io.println("Warning: Encountered unexpected end of file")
+          codegen_types
+        }
+        Error(TokenResponse([#(token, position), ..], UnexpectedToken)) -> {
+          io.println(
+            "Encountered unexpected token: "
+            <> glexer.to_source([#(token, position)])
+            <> " at byte offset "
+            <> position.byte_offset |> int.to_string,
+          )
+          codegen_types
+        }
       }
     }
     [_, ..tokens] -> parse_loop(tokens, codegen_types)
@@ -108,7 +132,7 @@ fn parse_documented_if_codegen_type(
         docstring_start,
         codegen_module,
       )
-    Error(Nil) -> Error(tokens)
+    Error(Nil) -> Error(TokenResponse(tokens, IgnoredToken))
   }
 }
 
@@ -121,8 +145,10 @@ fn maybe_parse_codegen_type(
 ) -> ParseResult(CodegenType) {
   case tokens {
     [#(token.Type, _), ..tokens] -> {
-      use #(tokens, #(parsed_type, end_pos)) <- result.try(parse_type(tokens))
-      Ok(#(
+      use TokenResponse(tokens, #(parsed_type, end_pos)) <- result.try(
+        parse_type(tokens),
+      )
+      Ok(TokenResponse(
         tokens,
         CodegenType(
           span: #(docstring_start.byte_offset, end_pos),
@@ -135,7 +161,7 @@ fn maybe_parse_codegen_type(
         ),
       ))
     }
-    _ -> Error(tokens)
+    _ -> Error(TokenResponse(tokens, IgnoredToken))
   }
 }
 
@@ -143,12 +169,17 @@ fn parse_type(tokens: List(PositionToken)) -> ParseResult(#(Type, Int)) {
   case tokens {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> todo
     [#(token.UpperName(name), _), #(token.LeftBrace, _), ..tokens] -> {
-      use #(tokens, #(parsed_variants, end_pos)) <- result.try(
+      use TokenResponse(tokens, #(parsed_variants, end_pos)) <- result.try(
         parse_variants(tokens, []),
       )
-      Ok(#(tokens, #(Type(name, [], parsed_variants |> list.reverse), end_pos)))
+      Ok(
+        TokenResponse(tokens, #(
+          Type(name, [], parsed_variants |> list.reverse),
+          end_pos,
+        )),
+      )
     }
-    tokens -> Error(tokens)
+    tokens -> Error(TokenResponse(tokens, UnexpectedToken))
   }
 }
 
@@ -158,11 +189,11 @@ fn parse_variants(
 ) -> ParseResult(#(List(Variant), Int)) {
   case tokens {
     [#(token.RightBrace, position), ..tokens] ->
-      Ok(#(tokens, #(reversed_variants, position.byte_offset)))
+      Ok(TokenResponse(tokens, #(reversed_variants, position.byte_offset)))
     tokens -> {
-      use #(tokens, variant) <- result.try(parse_maybe_documented_variant(
-        tokens,
-      ))
+      use TokenResponse(tokens, variant) <- result.try(
+        parse_maybe_documented_variant(tokens),
+      )
       parse_variants(tokens, [variant, ..reversed_variants])
     }
   }
@@ -194,8 +225,10 @@ fn parse_variant(
 ) -> ParseResult(Variant) {
   case tokens {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> {
-      use #(tokens, reversed_fields) <- result.try(parse_fields(tokens, []))
-      Ok(#(
+      use TokenResponse(tokens, reversed_fields) <- result.try(
+        parse_fields(tokens, []),
+      )
+      Ok(TokenResponse(
         tokens,
         Variant(
           name:,
@@ -206,7 +239,10 @@ fn parse_variant(
       ))
     }
     [#(token.UpperName(name), _), ..tokens] -> {
-      Ok(#(tokens, Variant(name:, docstring:, fields: [], attributes: [])))
+      Ok(TokenResponse(
+        tokens,
+        Variant(name:, docstring:, fields: [], attributes: []),
+      ))
     }
     _ -> todo
   }
@@ -218,15 +254,18 @@ fn parse_fields(
 ) -> ParseResult(List(Field)) {
   case tokens {
     [#(token.RightParen, _), ..tokens] -> {
-      Ok(#(tokens, reversed_fields))
+      Ok(TokenResponse(tokens, reversed_fields))
     }
     [#(token.Comma, _), ..tokens] -> {
       parse_fields(tokens, reversed_fields)
     }
     tokens -> {
       case parse_field(tokens) {
-        Error(tokens) -> parse_fields(tokens, reversed_fields)
-        Ok(#(tokens, field)) -> parse_fields(tokens, [field, ..reversed_fields])
+        Ok(TokenResponse(tokens, field)) ->
+          parse_fields(tokens, [field, ..reversed_fields])
+        Error(TokenResponse(tokens, IgnoredToken)) ->
+          parse_fields(tokens, reversed_fields)
+        Error(_) -> todo
       }
     }
   }
@@ -236,10 +275,13 @@ fn parse_field(tokens: List(PositionToken)) -> ParseResult(Field) {
   case tokens {
     [#(token.UpperName(name), _), ..] ->
       case parse_field_type(tokens) {
-        Ok(#(tokens, field_type)) -> Ok(#(tokens, UnlabelledField(field_type)))
+        Ok(TokenResponse(tokens, field_type)) ->
+          Ok(TokenResponse(tokens, UnlabelledField(field_type)))
         Error(tokens) -> Error(tokens)
       }
-    tokens -> Error(tokens)
+    [#(token.RightParen, _), ..tokens] ->
+      Error(TokenResponse(tokens, IgnoredToken))
+    tokens -> todo
   }
 }
 
@@ -247,8 +289,9 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
   case tokens {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> todo
     [#(token.UpperName(name), _), ..tokens] ->
-      Ok(#(tokens, NamedType(name, option.None, [])))
-    tokens -> Error(tokens)
+      Ok(TokenResponse(tokens, NamedType(name, option.None, [])))
+    [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
+    tokens -> todo
   }
 }
 
@@ -266,9 +309,16 @@ fn parse_docstring(
 type PositionToken =
   #(token.Token, glexer.Position)
 
-type ParseResult(value) =
-  Result(#(List(PositionToken), value), List(PositionToken))
+type TokenResponse(response) {
+  TokenResponse(tokens: List(PositionToken), response: response)
+}
 
+type ParseResult(value) =
+  Result(TokenResponse(value), TokenResponse(ParseError))
+
+/// Return the module inside parens in a magic !codegen_type(return/this)
+/// substring of the string. If the magic string occurs multiple times,
+/// return the *last* instance (closest to the definition below the docstring)
 fn extract_codegen_module(string: String) -> Result(String, Nil) {
   let assert Ok(re) =
     regexp.from_string("!codegen_type\\(([a-z][a-z_/]*)\\)\\s*$")
