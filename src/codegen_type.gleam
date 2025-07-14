@@ -293,7 +293,12 @@ fn parse_field(tokens: List(PositionToken)) -> ParseResult(Field) {
 
 fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
   case tokens {
-    [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> todo
+    [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> {
+      use TokenResponse(tokens, parameters) <- result.try(
+        parse_type_parameters(tokens, []),
+      )
+      Ok(TokenResponse(tokens, NamedType(name, option.None, parameters |> list.reverse)))
+    }
     [#(token.UpperName(name), _), ..tokens] ->
       Ok(TokenResponse(tokens, NamedType(name, option.None, [])))
     [#(token.Hash, _), #(token.LeftParen, _), ..tokens] -> {
@@ -319,7 +324,10 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
         _ -> Error(TokenResponse(tokens, UnexpectedToken))
       }
     }
+    [#(token.Name(module), _), #(token.Dot, _), #(token.UpperName(name), _), ..tokens] ->
+      Ok(TokenResponse(tokens, NamedType(name, option.Some(module), [])))
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
+    [#(token.Name(_), _), ..] -> todo // VariableType - requires parameterized type support
     tokens -> todo
   }
 }
@@ -356,6 +364,24 @@ fn parse_function_parameters(
     tokens -> {
       use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
       parse_function_parameters(tokens, [field_type, ..reversed_parameters])
+    }
+  }
+}
+
+fn parse_type_parameters(
+  tokens: List(PositionToken),
+  reversed_parameters: List(FieldType),
+) -> ParseResult(List(FieldType)) {
+  case tokens {
+    [#(token.RightParen, _), ..tokens] -> {
+      Ok(TokenResponse(tokens, reversed_parameters))
+    }
+    [#(token.Comma, _), ..tokens] -> {
+      parse_type_parameters(tokens, reversed_parameters)
+    }
+    tokens -> {
+      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(tokens))
+      parse_type_parameters(tokens, [field_type, ..reversed_parameters])
     }
   }
 }

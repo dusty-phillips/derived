@@ -471,3 +471,75 @@ pub fn parse_variant_with_function_field_test() {
       ),
     ]
 }
+
+pub fn parse_variant_with_module_qualified_field_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    Foo(option.Option)
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 67),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            "",
+            [
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("Option", option.Some("option"), []),
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_variant_with_parameterized_field_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    Foo(List(Int))
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 63),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            "",
+            [
+              codegen_type.UnlabelledField(
+                codegen_type.NamedType("List", option.None, [
+                  codegen_type.NamedType("Int", option.None, []),
+                ]),
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
+}
