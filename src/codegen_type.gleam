@@ -16,7 +16,6 @@ pub fn parse(input: String) -> List(CodegenType) {
   |> glexer.new()
   |> glexer.discard_whitespace()
   |> glexer.lex()
-  |> echo
   |> parse_loop([])
   |> list.reverse
 }
