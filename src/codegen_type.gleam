@@ -331,6 +331,18 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
       #(token.Name(module), _),
       #(token.Dot, _),
       #(token.UpperName(name), _),
+      #(token.LeftParen, _),
+      ..tokens
+    ] -> {
+      use TokenResponse(tokens, parameters) <- result.try(
+        parse_type_parameters(tokens, []),
+      )
+      Ok(TokenResponse(tokens, NamedType(name, option.Some(module), parameters |> list.reverse)))
+    }
+    [
+      #(token.Name(module), _),
+      #(token.Dot, _),
+      #(token.UpperName(name), _),
       ..tokens
     ] -> Ok(TokenResponse(tokens, NamedType(name, option.Some(module), [])))
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
