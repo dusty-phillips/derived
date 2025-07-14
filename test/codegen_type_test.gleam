@@ -171,7 +171,6 @@ pub fn parse_multiple_empty_variants_with_docstring_test() {
     ]
 }
 
-
 pub fn parse_variant_with_multiple_unlabellled_field_test() {
   let custom_types =
     "
@@ -214,7 +213,6 @@ pub fn parse_variant_with_multiple_unlabellled_field_test() {
     ]
 }
 
-
 pub fn parse_variant_with_multiple_labelled_field_test() {
   let custom_types =
     "
@@ -254,7 +252,6 @@ pub fn parse_variant_with_multiple_labelled_field_test() {
       ),
     ]
 }
-
 
 pub fn parse_variant_with_nested_tuple_field_test() {
   let custom_types =
@@ -296,8 +293,6 @@ pub fn parse_variant_with_nested_tuple_field_test() {
       ),
     ]
 }
-
-
 
 pub fn parse_variant_with_parameterized_field_test() {
   let custom_types =
@@ -744,11 +739,7 @@ pub fn parse_parameterized_type_test() {
           codegen_type.Variant(
             "Bar",
             "",
-            [
-              codegen_type.UnlabelledField(
-                codegen_type.VariableType("a"),
-              ),
-            ],
+            [codegen_type.UnlabelledField(codegen_type.VariableType("a"))],
             [],
           ),
         ]),

@@ -145,11 +145,9 @@ fn maybe_parse_codegen_type(
 ) -> ParseResult(CodegenType) {
   case tokens {
     [#(token.Type, _), ..tokens] -> {
-      use TokenResponse(tokens, #(parsed_type, end_pos)) <- result.try(
-        parse_type(tokens),
-      )
-      Ok(TokenResponse(
-        tokens,
+      parse_type(tokens)
+      |> map_parse_result(fn(type_and_pos) {
+        let #(parsed_type, end_pos) = type_and_pos
         CodegenType(
           span: #(docstring_start.byte_offset, end_pos),
           docstring: docstring,
@@ -158,8 +156,8 @@ fn maybe_parse_codegen_type(
           opaque_: False,
           parsed_type:,
           codegen_module:,
-        ),
-      ))
+        )
+      })
     }
     _ -> Error(TokenResponse(tokens, IgnoredToken))
   }
@@ -176,21 +174,21 @@ fn parse_type(tokens: List(PositionToken)) -> ParseResult(#(Type, Int)) {
       )
       Ok(
         TokenResponse(tokens, #(
-          Type(name, parameters |> list.reverse, parsed_variants |> list.reverse),
+          Type(
+            name,
+            parameters |> list.reverse,
+            parsed_variants |> list.reverse,
+          ),
           end_pos,
         )),
       )
     }
     [#(token.UpperName(name), _), ..tokens] -> {
-      use TokenResponse(tokens, #(parsed_variants, end_pos)) <- result.try(
-        parse_variants(tokens, []),
-      )
-      Ok(
-        TokenResponse(tokens, #(
-          Type(name, [], parsed_variants |> list.reverse),
-          end_pos,
-        )),
-      )
+      parse_variants(tokens, [])
+      |> map_parse_result(fn(variants_and_pos) {
+        let #(parsed_variants, end_pos) = variants_and_pos
+        #(Type(name, [], parsed_variants |> list.reverse), end_pos)
+      })
     }
     tokens -> Error(TokenResponse(tokens, UnexpectedToken))
   }
@@ -201,7 +199,8 @@ fn parse_variants(
   reversed_variants: List(Variant),
 ) -> ParseResult(#(List(Variant), Int)) {
   case tokens {
-    [#(token.LeftBrace, _), ..tokens] -> parse_variants(tokens, reversed_variants)
+    [#(token.LeftBrace, _), ..tokens] ->
+      parse_variants(tokens, reversed_variants)
     [#(token.RightBrace, position), ..tokens] ->
       Ok(TokenResponse(tokens, #(reversed_variants, position.byte_offset)))
     tokens -> {
@@ -239,18 +238,15 @@ fn parse_variant(
 ) -> ParseResult(Variant) {
   case tokens {
     [#(token.UpperName(name), _), #(token.LeftParen, _), ..tokens] -> {
-      use TokenResponse(tokens, reversed_fields) <- result.try(
-        parse_fields(tokens, []),
-      )
-      Ok(TokenResponse(
-        tokens,
+      parse_fields(tokens, [])
+      |> map_parse_result(fn(reversed_fields) {
         Variant(
-          name:,
-          docstring:,
+          name: name,
+          docstring: docstring,
           fields: reversed_fields |> list.reverse,
           attributes: [],
-        ),
-      ))
+        )
+      })
     }
     [#(token.UpperName(name), _), ..tokens] -> {
       Ok(TokenResponse(
@@ -290,17 +286,13 @@ fn parse_field(tokens: List(PositionToken)) -> ParseResult(Field) {
     [#(token.RightParen, _), ..tokens] ->
       Error(TokenResponse(tokens, IgnoredToken))
     [#(token.Name(label), _), #(token.Colon, _), ..tokens] -> {
-      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(
-        tokens,
-      ))
-      Ok(TokenResponse(tokens, LabelledField(field_type, label)))
+      parse_field_type(tokens)
+      |> map_parse_result(LabelledField(_, label))
     }
 
     tokens -> {
-      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(
-        tokens,
-      ))
-      Ok(TokenResponse(tokens, UnlabelledField(field_type)))
+      parse_field_type(tokens)
+      |> map_parse_result(UnlabelledField)
     }
   }
 }
@@ -363,7 +355,7 @@ fn parse_field_type(tokens: List(PositionToken)) -> ParseResult(FieldType) {
       ..tokens
     ] -> Ok(TokenResponse(tokens, NamedType(name, option.Some(module), [])))
     [#(token.Comma, _), ..tokens] -> Error(TokenResponse(tokens, IgnoredToken))
-    [#(token.Name(variable_name), _), ..tokens] -> 
+    [#(token.Name(variable_name), _), ..tokens] ->
       Ok(TokenResponse(tokens, VariableType(variable_name)))
     tokens -> Error(TokenResponse(tokens, UnexpectedToken))
   }
@@ -420,7 +412,12 @@ fn parse_type_parameter_names(
   tokens: List(PositionToken),
   reversed_parameters: List(String),
 ) -> ParseResult(List(String)) {
-  parse_comma_separated(tokens, token.RightParen, parse_parameter_name, reversed_parameters)
+  parse_comma_separated(
+    tokens,
+    token.RightParen,
+    parse_parameter_name,
+    reversed_parameters,
+  )
 }
 
 fn parse_parameter_name(tokens: List(PositionToken)) -> ParseResult(String) {
@@ -459,6 +456,14 @@ type TokenResponse(response) {
 
 type ParseResult(value) =
   Result(TokenResponse(value), TokenResponse(ParseError))
+
+fn map_parse_result(
+  result: ParseResult(a),
+  mapper: fn(a) -> b,
+) -> ParseResult(b) {
+  use TokenResponse(tokens, value) <- result.try(result)
+  Ok(TokenResponse(tokens, mapper(value)))
+}
 
 /// Return the module inside parens in a magic !codegen_type(return/this)
 /// substring of the string. If the magic string occurs multiple times,
