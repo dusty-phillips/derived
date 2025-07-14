@@ -97,10 +97,80 @@ pub fn parse_single_empty_variant_codegen_type_test() {
     "
     |> codegen_type.parse
 
-  assert custom_types == []
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 89),
+        " A real codegen type! !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Foo", "", [], [])]),
+        "foobar",
+      ),
+    ]
 }
 
-pub fn parse_type_with_parameters_test() {
+pub fn parse_single_empty_variant_with_docstring_test() {
+  let custom_types =
+    "
+    /// A real codegen type!
+    /// !codegen_type(foobar)
+    type Foo {
+      /// A Foo does foo things
+      Foo
+    }
+    "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 121),
+        " A real codegen type! !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant("Foo", " A Foo does foo things", [], []),
+        ]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_multiple_empty_variants_with_docstring_test() {
+  let custom_types =
+    "
+    /// A real codegen type!
+    /// !codegen_type(foobar)
+    type Foo {
+      /// A Foo does foo things
+      Foo
+      /// A Bar does bar things
+      Bar
+    }
+    "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(5, 163),
+        " A real codegen type! !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant("Foo", " A Foo does foo things", [], []),
+          codegen_type.Variant("Bar", " A Bar does bar things", [], []),
+        ]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_type_with_generic_parameters_test() {
   todo
 }
 

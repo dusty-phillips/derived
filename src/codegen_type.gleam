@@ -150,7 +150,7 @@ fn parse_type(tokens: List(PositionToken)) -> ParseResult(#(Type, Int)) {
       use #(tokens, #(parsed_variants, end_pos)) <- result.try(
         parse_variants(tokens, []),
       )
-      Ok(#(tokens, #(Type(name, [], parsed_variants), end_pos)))
+      Ok(#(tokens, #(Type(name, [], parsed_variants |> list.reverse), end_pos)))
     }
     tokens -> Error(tokens)
   }
@@ -160,23 +160,58 @@ fn parse_variants(
   tokens: List(PositionToken),
   reversed_variants: List(Variant),
 ) -> ParseResult(#(List(Variant), Int)) {
-  echo tokens
   case tokens {
     [#(token.RightBrace, position), ..tokens] ->
       Ok(#(tokens, #(reversed_variants, position.byte_offset)))
-    [#(token.UpperName(name), _), ..tokens] -> {
-      use #(tokens, variant) <- result.try(parse_variant(tokens, name))
+    tokens -> {
+      use #(tokens, variant) <- result.try(parse_maybe_documented_variant(
+        tokens,
+      ))
       parse_variants(tokens, [variant, ..reversed_variants])
     }
-    tokens -> Error(tokens)
   }
+}
+
+fn parse_maybe_documented_variant(
+  tokens: List(PositionToken),
+) -> ParseResult(Variant) {
+  case tokens {
+    [#(token.UpperName(_), _), ..] -> parse_variant(tokens, "")
+    [#(token.CommentDoc(docstring), _), ..tokens] -> {
+      let #(tokens, docstring) = parse_docstring(tokens, docstring)
+      parse_variant_definition(tokens, docstring)
+    }
+    _ -> todo
+  }
+}
+
+fn parse_variant_definition(
+  tokens: List(PositionToken),
+  docstring: String,
+) -> ParseResult(Variant) {
+  parse_variant(tokens, docstring)
 }
 
 fn parse_variant(
   tokens: List(PositionToken),
-  name: String,
+  docstring: String,
 ) -> ParseResult(Variant) {
-  todo
+  case tokens {
+    [#(token.UpperName(name), _), ..tokens] -> {
+      case parse_fields(tokens) {
+        Ok(#(tokens, fields)) -> todo
+        Error(tokens) ->
+          Ok(#(tokens, Variant(name:, docstring:, fields: [], attributes: [])))
+      }
+    }
+    _ -> todo
+  }
+}
+
+fn parse_fields(tokens: List(PositionToken)) -> ParseResult(Variant) {
+  case tokens {
+    _ -> Error(tokens)
+  }
 }
 
 fn parse_docstring(
