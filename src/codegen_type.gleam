@@ -273,15 +273,21 @@ fn parse_fields(
 
 fn parse_field(tokens: List(PositionToken)) -> ParseResult(Field) {
   case tokens {
-    [#(token.UpperName(name), _), ..] ->
-      case parse_field_type(tokens) {
-        Ok(TokenResponse(tokens, field_type)) ->
-          Ok(TokenResponse(tokens, UnlabelledField(field_type)))
-        Error(tokens) -> Error(tokens)
-      }
     [#(token.RightParen, _), ..tokens] ->
       Error(TokenResponse(tokens, IgnoredToken))
-    tokens -> todo
+    [#(token.Name(label), _), #(token.Colon, _), ..tokens] -> {
+      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(
+        tokens,
+      ))
+      Ok(TokenResponse(tokens, LabelledField(field_type, label)))
+    }
+
+    tokens -> {
+      use TokenResponse(tokens, field_type) <- result.try(parse_field_type(
+        tokens,
+      ))
+      Ok(TokenResponse(tokens, UnlabelledField(field_type)))
+    }
   }
 }
 

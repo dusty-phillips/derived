@@ -276,10 +276,78 @@ pub fn parse_variant_with_multiple_unlabellled_field_test() {
     ]
 }
 
-pub fn parse_type_with_generic_parameters_test() {
-  todo
+pub fn parse_variant_with_single_labelled_field_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    Foo(bar: String)
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 65),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            "",
+            [
+              codegen_type.LabelledField(
+                codegen_type.NamedType("String", option.None, []),
+                "bar",
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
 }
 
-pub fn parse_type_with_attributes_test() {
-  todo
+pub fn parse_variant_with_multiple_labelled_field_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Foo {
+    Foo(bar: String, baz: Int)
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 75),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [
+          codegen_type.Variant(
+            "Foo",
+            "",
+            [
+              codegen_type.LabelledField(
+                codegen_type.NamedType("String", option.None, []),
+                "bar",
+              ),
+              codegen_type.LabelledField(
+                codegen_type.NamedType("Int", option.None, []),
+                "baz",
+              ),
+            ],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
 }
