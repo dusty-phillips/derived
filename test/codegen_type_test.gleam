@@ -776,3 +776,195 @@ pub fn parse_variant_with_deprecated_attribute_test() {
       ),
     ]
 }
+
+pub fn parse_type_with_deprecated_attribute_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  @deprecated(\"use NewFoo instead\")
+  type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 88),
+        " !codegen_type(foobar)",
+        [codegen_type.Deprecated("use NewFoo instead")],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_type_with_multiple_attributes_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  @internal
+  @deprecated(\"use NewFoo instead\")
+  @target(erlang)
+  type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 118),
+        " !codegen_type(foobar)",
+        [
+          codegen_type.Internal,
+          codegen_type.Deprecated("use NewFoo instead"),
+          codegen_type.Target(codegen_type.Erlang),
+        ],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_public_type_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  pub type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 56),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Public,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_public_opaque_type_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  pub opaque type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 63),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Public,
+        True,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_attributed_public_type_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  @deprecated(\"use NewFoo instead\")
+  pub type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 92),
+        " !codegen_type(foobar)",
+        [codegen_type.Deprecated("use NewFoo instead")],
+        codegen_type.Public,
+        False,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_attributed_public_opaque_type_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  @internal
+  pub opaque type Foo {
+    Bar
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 75),
+        " !codegen_type(foobar)",
+        [codegen_type.Internal],
+        codegen_type.Public,
+        True,
+        codegen_type.Type("Foo", [], [codegen_type.Variant("Bar", "", [], [])]),
+        "foobar",
+      ),
+    ]
+}
+
+pub fn parse_multiple_type_parameters_test() {
+  let custom_types =
+    "
+  /// !codegen_type(foobar)
+  type Result(a, b) {
+    Ok(a)
+    Error(b)
+  }
+  "
+    |> codegen_type.parse
+
+  assert custom_types
+    == [
+      codegen_type.CodegenType(
+        #(3, 76),
+        " !codegen_type(foobar)",
+        [],
+        codegen_type.Private,
+        False,
+        codegen_type.Type("Result", ["a", "b"], [
+          codegen_type.Variant(
+            "Ok",
+            "",
+            [codegen_type.UnlabelledField(codegen_type.VariableType("a"))],
+            [],
+          ),
+          codegen_type.Variant(
+            "Error",
+            "",
+            [codegen_type.UnlabelledField(codegen_type.VariableType("b"))],
+            [],
+          ),
+        ]),
+        "foobar",
+      ),
+    ]
+}

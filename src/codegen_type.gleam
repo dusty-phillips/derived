@@ -1,4 +1,3 @@
-import glance
 import gleam/int
 import gleam/io
 import gleam/list
@@ -13,8 +12,6 @@ import glexer/token
 ///
 /// All other syntaxes (including invalid syntaxes) are ignored
 pub fn parse(input: String) -> List(CodegenType) {
-  input |> glance.module() |> echo
-
   input
   |> glexer.new()
   |> glexer.discard_whitespace()
@@ -131,6 +128,9 @@ fn parse_documented_if_codegen_type(
         docstring,
         docstring_start,
         codegen_module,
+        [],
+        Private,
+        False,
       )
     Error(Nil) -> Error(TokenResponse(tokens, IgnoredToken))
   }
@@ -142,8 +142,45 @@ fn maybe_parse_codegen_type(
   docstring: String,
   docstring_start: glexer.Position,
   codegen_module: String,
+  attributes: List(Attribute),
+  publicity: Publicity,
+  opaque_: Bool,
 ) -> ParseResult(CodegenType) {
   case tokens {
+    [#(token.At, _), ..tokens] -> {
+      use TokenResponse(tokens, attribute) <- result.try(parse_attribute(tokens))
+      maybe_parse_codegen_type(
+        tokens,
+        docstring,
+        docstring_start,
+        codegen_module,
+        [attribute, ..attributes],
+        publicity,
+        opaque_,
+      )
+    }
+    [#(token.Pub, _), ..tokens] -> {
+      maybe_parse_codegen_type(
+        tokens,
+        docstring,
+        docstring_start,
+        codegen_module,
+        attributes,
+        Public,
+        opaque_,
+      )
+    }
+    [#(token.Opaque, _), ..tokens] -> {
+      maybe_parse_codegen_type(
+        tokens,
+        docstring,
+        docstring_start,
+        codegen_module,
+        attributes,
+        publicity,
+        True,
+      )
+    }
     [#(token.Type, _), ..tokens] -> {
       parse_type(tokens)
       |> map_parse_result(fn(type_and_pos) {
@@ -151,9 +188,9 @@ fn maybe_parse_codegen_type(
         CodegenType(
           span: #(docstring_start.byte_offset, end_pos),
           docstring: docstring,
-          attributes: [],
-          publicity: Private,
-          opaque_: False,
+          attributes: attributes |> list.reverse,
+          publicity:,
+          opaque_:,
           parsed_type:,
           codegen_module:,
         )
@@ -438,8 +475,13 @@ fn parse_parameter_name(tokens: List(PositionToken)) -> ParseResult(String) {
 
 fn parse_attribute(tokens: List(PositionToken)) -> ParseResult(Attribute) {
   case tokens {
-    [#(token.Name("deprecated"), _), #(token.LeftParen, _), #(token.String(reason), _), #(token.RightParen, _), ..tokens] ->
-      Ok(TokenResponse(tokens, Deprecated(reason)))
+    [
+      #(token.Name("deprecated"), _),
+      #(token.LeftParen, _),
+      #(token.String(reason), _),
+      #(token.RightParen, _),
+      ..tokens
+    ] -> Ok(TokenResponse(tokens, Deprecated(reason)))
     [#(token.Name("internal"), _), ..tokens] ->
       Ok(TokenResponse(tokens, Internal))
     [
