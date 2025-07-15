@@ -1,16 +1,16 @@
-import derived_ast
+import derived/ast
 import gleam/list
 import gleam/regexp
 import gleam/result
 import gleam/string
 
 pub fn parse(input: String) {
-  derived_ast.parse(input)
+  ast.parse(input)
 }
 
 pub fn generate(
   input: String,
-  callback: fn(derived_ast.DerivedType) -> Result(String, Nil),
+  callback: fn(ast.DerivedType) -> Result(String, Nil),
 ) -> String {
   let derived_types = input |> parse |> list.reverse
 
@@ -36,7 +36,7 @@ fn create_derived_content(
   generated_code: String,
   derived_name: String,
   source: String,
-  derived_type: derived_ast.DerivedType,
+  derived_type: ast.DerivedType,
 ) -> String {
   let new_content =
     start_marker(derived_name)
@@ -77,7 +77,7 @@ fn find_and_replace_markers(
 
 fn insert_after_type(
   source: String,
-  derived_type: derived_ast.DerivedType,
+  derived_type: ast.DerivedType,
   content: String,
 ) -> String {
   let #(_start, end) = derived_type.span

@@ -1,4 +1,4 @@
-import derived_ast
+import derived/ast
 import gleam/option
 import gleeunit
 
@@ -18,7 +18,7 @@ pub fn ignore_undocumented_tokens_test() {
     io.println(\"doing\")
   }
 "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types == []
 }
@@ -30,7 +30,7 @@ pub fn ignore_unteathered_docstring_test() {
     /// of many lines
     /// but it doesn't contain the codgen_type magic string
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types == []
 }
@@ -44,7 +44,7 @@ pub fn ignore_docstring_with_function_test() {
     fn some_function() {
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types == []
 }
@@ -59,7 +59,7 @@ pub fn ignore_derived_with_function_test() {
     fn some_function() {
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types == []
 }
@@ -71,17 +71,17 @@ pub fn parse_empty_private_derived_test() {
     /// !derived(foobar)
     type Foo {}
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(5, 69),
         " A real derived type!\n !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], []),
+        ast.Type("Foo", [], []),
         ["foobar"],
       ),
     ]
@@ -96,17 +96,17 @@ pub fn parse_single_empty_variant_derived_test() {
       Foo
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(5, 84),
         " A real derived type!\n !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Foo", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Foo", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -122,18 +122,18 @@ pub fn parse_single_empty_variant_with_docstring_test() {
       Foo
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(5, 116),
         " A real derived type!\n !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant("Foo", " A Foo does foo things", [], []),
+        ast.Type("Foo", [], [
+          ast.Variant("Foo", " A Foo does foo things", [], []),
         ]),
         ["foobar"],
       ),
@@ -152,19 +152,19 @@ pub fn parse_multiple_empty_variants_with_docstring_test() {
       Bar
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(5, 158),
         " A real derived type!\n !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant("Foo", " A Foo does foo things", [], []),
-          derived_ast.Variant("Bar", " A Bar does bar things", [], []),
+        ast.Type("Foo", [], [
+          ast.Variant("Foo", " A Foo does foo things", [], []),
+          ast.Variant("Bar", " A Bar does bar things", [], []),
         ]),
         ["foobar"],
       ),
@@ -180,29 +180,29 @@ pub fn parse_variant_with_multiple_unlabellled_field_test() {
       Foo(String, Int, Bool)
     }
     "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(5, 106),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             " A Foo does foo things",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("String", option.None, []),
               ),
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Int", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Int", option.None, []),
               ),
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Bool", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Bool", option.None, []),
               ),
             ],
             [],
@@ -221,27 +221,27 @@ pub fn parse_variant_with_multiple_labelled_field_test() {
     Foo(bar: String, baz: Int)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 70),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.LabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.LabelledField(
+                ast.NamedType("String", option.None, []),
                 "bar",
               ),
-              derived_ast.LabelledField(
-                derived_ast.NamedType("Int", option.None, []),
+              ast.LabelledField(
+                ast.NamedType("Int", option.None, []),
                 "baz",
               ),
             ],
@@ -261,27 +261,27 @@ pub fn parse_variant_with_nested_tuple_field_test() {
     Foo(#(Int, #(String, Bool)))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 72),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.TupleType([
-                  derived_ast.NamedType("Int", option.None, []),
-                  derived_ast.TupleType([
-                    derived_ast.NamedType("String", option.None, []),
-                    derived_ast.NamedType("Bool", option.None, []),
+              ast.UnlabelledField(
+                ast.TupleType([
+                  ast.NamedType("Int", option.None, []),
+                  ast.TupleType([
+                    ast.NamedType("String", option.None, []),
+                    ast.NamedType("Bool", option.None, []),
                   ]),
                 ]),
               ),
@@ -302,24 +302,24 @@ pub fn parse_variant_with_parameterized_field_test() {
     Foo(List(Int))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 58),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("List", option.None, [
-                  derived_ast.NamedType("Int", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("List", option.None, [
+                  ast.NamedType("Int", option.None, []),
                 ]),
               ),
             ],
@@ -339,24 +339,24 @@ pub fn parse_variant_with_zero_parameter_function_test() {
     Foo(fn() -> Int)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 60),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(derived_ast.FunctionType(
+              ast.UnlabelledField(ast.FunctionType(
                 [],
-                derived_ast.NamedType("Int", option.None, []),
+                ast.NamedType("Int", option.None, []),
               )),
             ],
             [],
@@ -375,30 +375,30 @@ pub fn parse_variant_with_mixed_fields_test() {
     Foo(String, bar: Int, Bool)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 71),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("String", option.None, []),
               ),
-              derived_ast.LabelledField(
-                derived_ast.NamedType("Int", option.None, []),
+              ast.LabelledField(
+                ast.NamedType("Int", option.None, []),
                 "bar",
               ),
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Bool", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Bool", option.None, []),
               ),
             ],
             [],
@@ -417,24 +417,24 @@ pub fn parse_variant_with_module_qualified_parameterized_field_test() {
     Foo(option.Option(String))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 70),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Option", option.Some("option"), [
-                  derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Option", option.Some("option"), [
+                  ast.NamedType("String", option.None, []),
                 ]),
               ),
             ],
@@ -459,39 +459,39 @@ pub fn parse_multiple_variants_with_fields_test() {
     Qux(name: String, List(Int))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 170),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant("Bar", " Simple variant", [], []),
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant("Bar", " Simple variant", [], []),
+          ast.Variant(
             "Baz",
             " Variant with field",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("String", option.None, []),
               ),
             ],
             [],
           ),
-          derived_ast.Variant(
+          ast.Variant(
             "Qux",
             " Complex variant",
             [
-              derived_ast.LabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.LabelledField(
+                ast.NamedType("String", option.None, []),
                 "name",
               ),
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("List", option.None, [
-                  derived_ast.NamedType("Int", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("List", option.None, [
+                  ast.NamedType("Int", option.None, []),
                 ]),
               ),
             ],
@@ -511,29 +511,29 @@ pub fn parse_variant_with_function_taking_tuple_test() {
     Foo(fn(#(Int, String)) -> Bool)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 75),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(derived_ast.FunctionType(
+              ast.UnlabelledField(ast.FunctionType(
                 [
-                  derived_ast.TupleType([
-                    derived_ast.NamedType("Int", option.None, []),
-                    derived_ast.NamedType("String", option.None, []),
+                  ast.TupleType([
+                    ast.NamedType("Int", option.None, []),
+                    ast.NamedType("String", option.None, []),
                   ]),
                 ],
-                derived_ast.NamedType("Bool", option.None, []),
+                ast.NamedType("Bool", option.None, []),
               )),
             ],
             [],
@@ -552,27 +552,27 @@ pub fn parse_variant_with_tuple_containing_function_test() {
     Foo(#(Int, fn() -> String))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 71),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.TupleType([
-                  derived_ast.NamedType("Int", option.None, []),
-                  derived_ast.FunctionType(
+              ast.UnlabelledField(
+                ast.TupleType([
+                  ast.NamedType("Int", option.None, []),
+                  ast.FunctionType(
                     [],
-                    derived_ast.NamedType("String", option.None, []),
+                    ast.NamedType("String", option.None, []),
                   ),
                 ]),
               ),
@@ -593,29 +593,29 @@ pub fn parse_variant_with_complex_parameterized_types_test() {
     Foo(Result(#(Int, String), List(Error)))
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 84),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Result", option.None, [
-                  derived_ast.TupleType([
-                    derived_ast.NamedType("Int", option.None, []),
-                    derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Result", option.None, [
+                  ast.TupleType([
+                    ast.NamedType("Int", option.None, []),
+                    ast.NamedType("String", option.None, []),
                   ]),
-                  derived_ast.NamedType("List", option.None, [
-                    derived_ast.NamedType("Error", option.None, []),
+                  ast.NamedType("List", option.None, [
+                    ast.NamedType("Error", option.None, []),
                   ]),
                 ]),
               ),
@@ -643,23 +643,23 @@ pub fn parse_multiple_deriveds_test() {
     Bar(Int)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 74),
         " First type\n !derived(module_a)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant(
+        ast.Type("Foo", [], [
+          ast.Variant(
             "Foo",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("String", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("String", option.None, []),
               ),
             ],
             [],
@@ -667,19 +667,19 @@ pub fn parse_multiple_deriveds_test() {
         ]),
         ["module_a"],
       ),
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(79, 148),
         " Second type\n !derived(module_b)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Bar", [], [
-          derived_ast.Variant(
+        ast.Type("Bar", [], [
+          ast.Variant(
             "Bar",
             "",
             [
-              derived_ast.UnlabelledField(
-                derived_ast.NamedType("Int", option.None, []),
+              ast.UnlabelledField(
+                ast.NamedType("Int", option.None, []),
               ),
             ],
             [],
@@ -701,17 +701,17 @@ pub fn parse_docstring_with_multiple_derived_annotations_test() {
     Foo
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 160),
         " This is a type with multiple annotations\n !derived(first_module)\n More documentation here\n !derived(second_module)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Foo", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Foo", "", [], [])]),
         ["first_module", "second_module"],
       ),
     ]
@@ -725,21 +725,21 @@ pub fn parse_parameterized_type_test() {
     Bar(a)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 53),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", ["a"], [
-          derived_ast.Variant(
+        ast.Type("Foo", ["a"], [
+          ast.Variant(
             "Bar",
             "",
-            [derived_ast.UnlabelledField(derived_ast.VariableType("a"))],
+            [ast.UnlabelledField(ast.VariableType("a"))],
             [],
           ),
         ]),
@@ -757,19 +757,19 @@ pub fn parse_variant_with_deprecated_attribute_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 82),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [
-          derived_ast.Variant("Bar", "", [], [
-            derived_ast.Deprecated("use baz instead"),
+        ast.Type("Foo", [], [
+          ast.Variant("Bar", "", [], [
+            ast.Deprecated("use baz instead"),
           ]),
         ]),
         ["foobar"],
@@ -786,17 +786,17 @@ pub fn parse_type_with_deprecated_attribute_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 83),
         " !derived(foobar)",
-        [derived_ast.Deprecated("use NewFoo instead")],
-        derived_ast.Private,
+        [ast.Deprecated("use NewFoo instead")],
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -813,21 +813,21 @@ pub fn parse_type_with_multiple_attributes_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 113),
         " !derived(foobar)",
         [
-          derived_ast.Internal,
-          derived_ast.Deprecated("use NewFoo instead"),
-          derived_ast.Target(derived_ast.Erlang),
+          ast.Internal,
+          ast.Deprecated("use NewFoo instead"),
+          ast.Target(ast.Erlang),
         ],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -841,17 +841,17 @@ pub fn parse_public_type_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 51),
         " !derived(foobar)",
         [],
-        derived_ast.Public,
+        ast.Public,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -865,17 +865,17 @@ pub fn parse_public_opaque_type_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 58),
         " !derived(foobar)",
         [],
-        derived_ast.Public,
+        ast.Public,
         True,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -890,17 +890,17 @@ pub fn parse_attributed_public_type_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 87),
         " !derived(foobar)",
-        [derived_ast.Deprecated("use NewFoo instead")],
-        derived_ast.Public,
+        [ast.Deprecated("use NewFoo instead")],
+        ast.Public,
         False,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -915,17 +915,17 @@ pub fn parse_attributed_public_opaque_type_test() {
     Bar
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 70),
         " !derived(foobar)",
-        [derived_ast.Internal],
-        derived_ast.Public,
+        [ast.Internal],
+        ast.Public,
         True,
-        derived_ast.Type("Foo", [], [derived_ast.Variant("Bar", "", [], [])]),
+        ast.Type("Foo", [], [ast.Variant("Bar", "", [], [])]),
         ["foobar"],
       ),
     ]
@@ -940,27 +940,27 @@ pub fn parse_multiple_type_parameters_test() {
     Error(b)
   }
   "
-    |> derived_ast.parse
+    |> ast.parse
 
   assert custom_types
     == [
-      derived_ast.DerivedType(
+      ast.DerivedType(
         #(3, 71),
         " !derived(foobar)",
         [],
-        derived_ast.Private,
+        ast.Private,
         False,
-        derived_ast.Type("Result", ["a", "b"], [
-          derived_ast.Variant(
+        ast.Type("Result", ["a", "b"], [
+          ast.Variant(
             "Ok",
             "",
-            [derived_ast.UnlabelledField(derived_ast.VariableType("a"))],
+            [ast.UnlabelledField(ast.VariableType("a"))],
             [],
           ),
-          derived_ast.Variant(
+          ast.Variant(
             "Error",
             "",
-            [derived_ast.UnlabelledField(derived_ast.VariableType("b"))],
+            [ast.UnlabelledField(ast.VariableType("b"))],
             [],
           ),
         ]),
