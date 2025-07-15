@@ -71,31 +71,33 @@ type Product {
 
 ```javascript
 const user_schema = {
-  type: "object",
-  title: "User",
-  oneOf: [
+  "type": "object",
+  "title": "User",
+  "oneOf": [
     {
-      type: "object",
-      title: "User",
-      properties: {
-        type: { const: "User" },
-        name: { type: "string" },
-        age: { type: "integer" },
-        email: { type: "string" },
+      "type": "object",
+      "title": "User",
+      "description": "A regular user account",
+      "properties": {
+        "type": { "const": "User" },
+        "name": { "type": "string" },
+        "age": { "type": "integer" },
+        "email": { "type": "string" }
       },
-      required: ["type", "name", "age", "email"],
+      "required": ["type", "name", "age", "email"]
     },
     {
-      type: "object",
-      title: "Admin",
-      properties: {
-        type: { const: "Admin" },
-        name: { type: "string" },
-        permissions: { type: "array", items: { type: "string" } },
+      "type": "object",
+      "title": "Admin",
+      "description": "An admin user account",
+      "properties": {
+        "type": { "const": "Admin" },
+        "name": { "type": "string" },
+        "permissions": { "type": "array", "items": { "type": "string" } }
       },
-      required: ["type", "name", "permissions"],
-    },
-  ],
+      "required": ["type", "name", "permissions"]
+    }
+  ]
 };
 ```
 
