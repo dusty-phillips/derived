@@ -448,7 +448,7 @@ fn parse_docstring(
 ) -> #(List(PositionToken), String) {
   case tokens {
     [#(token.CommentDoc(new_docstring), _), ..tokens] ->
-      parse_docstring(tokens, docstring <> new_docstring)
+      parse_docstring(tokens, docstring <> "\n" <> new_docstring)
     tokens -> #(tokens, docstring)
   }
 }

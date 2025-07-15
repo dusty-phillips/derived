@@ -77,7 +77,7 @@ pub fn parse_empty_private_derived_test() {
     == [
       derived.DerivedType(
         #(5, 69),
-        " A real derived type! !derived(foobar)",
+        " A real derived type!\n !derived(foobar)",
         [],
         derived.Private,
         False,
@@ -102,7 +102,7 @@ pub fn parse_single_empty_variant_derived_test() {
     == [
       derived.DerivedType(
         #(5, 84),
-        " A real derived type! !derived(foobar)",
+        " A real derived type!\n !derived(foobar)",
         [],
         derived.Private,
         False,
@@ -128,7 +128,7 @@ pub fn parse_single_empty_variant_with_docstring_test() {
     == [
       derived.DerivedType(
         #(5, 116),
-        " A real derived type! !derived(foobar)",
+        " A real derived type!\n !derived(foobar)",
         [],
         derived.Private,
         False,
@@ -158,7 +158,7 @@ pub fn parse_multiple_empty_variants_with_docstring_test() {
     == [
       derived.DerivedType(
         #(5, 158),
-        " A real derived type! !derived(foobar)",
+        " A real derived type!\n !derived(foobar)",
         [],
         derived.Private,
         False,
@@ -647,7 +647,7 @@ pub fn parse_multiple_deriveds_test() {
     == [
       derived.DerivedType(
         #(3, 74),
-        " First type !derived(module_a)",
+        " First type\n !derived(module_a)",
         [],
         derived.Private,
         False,
@@ -667,7 +667,7 @@ pub fn parse_multiple_deriveds_test() {
       ),
       derived.DerivedType(
         #(79, 148),
-        " Second type !derived(module_b)",
+        " Second type\n !derived(module_b)",
         [],
         derived.Private,
         False,
@@ -701,7 +701,7 @@ pub fn parse_docstring_with_multiple_derived_annotations_test() {
     == [
       derived.DerivedType(
         #(3, 160),
-        " This is a type with multiple annotations !derived(first_module) More documentation here !derived(second_module)",
+        " This is a type with multiple annotations\n !derived(first_module)\n More documentation here\n !derived(second_module)",
         [],
         derived.Private,
         False,
