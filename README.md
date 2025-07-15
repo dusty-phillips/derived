@@ -1,20 +1,31 @@
-# codegen_type
+# derived
 
-[![Package Version](https://img.shields.io/hexpm/v/codegen_type)](https://hex.pm/packages/codegen_type)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/codegen_type/)
+[![Package Version](https://img.shields.io/hexpm/v/derived)](https://hex.pm/packages/derived)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/derived/)
+
+A Gleam library for parsing custom types from Gleam source code that are marked with special `!derived()` annotations in their docstrings.
 
 ```sh
-gleam add codegen_type@1
+gleam add derived@1
 ```
 ```gleam
-import codegen_type
+import derived
 
 pub fn main() -> Nil {
-  // TODO: An example of the project in use
+  let gleam_source = "
+    /// A custom type for demonstration
+    /// !derived(json)
+    pub type Person {
+      Person(name: String, age: Int)
+    }
+  "
+  
+  let derived_types = derived.parse(gleam_source)
+  // Returns a list of DerivedType records containing parsed type information
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/codegen_type>.
+Further documentation can be found at <https://hexdocs.pm/derived>.
 
 ## Development
 

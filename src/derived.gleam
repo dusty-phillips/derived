@@ -7,11 +7,11 @@ import gleam/result
 import glexer
 import glexer/token
 
-/// Extract any custom types marked with !codegen_type() from the input string
+/// Extract any custom types marked with !derived() from the input string
 /// including their docstrings.
 ///
 /// All other syntaxes (including invalid syntaxes) are ignored
-pub fn parse(input: String) -> List(CodegenType) {
+pub fn parse(input: String) -> List(DerivedType) {
   input
   |> glexer.new()
   |> glexer.discard_whitespace()
@@ -21,22 +21,22 @@ pub fn parse(input: String) -> List(CodegenType) {
 }
 
 pub type ParseError {
-  /// Encountered an unexpected token while parsing a codegen_type
+  /// Encountered an unexpected token while parsing a derived type
   UnexpectedToken
   /// Encountered an unexpected token in a place where unknown tokens
   /// are expected (e.g. while parsing a function)
   IgnoredToken
 }
 
-pub type CodegenType {
-  CodegenType(
+pub type DerivedType {
+  DerivedType(
     span: #(Int, Int),
     docstring: String,
     attributes: List(Attribute),
     publicity: Publicity,
     opaque_: Bool,
     parsed_type: Type,
-    codegen_module: String,
+    derived_module: String,
   )
 }
 
@@ -83,19 +83,19 @@ pub type FieldType {
 
 fn parse_loop(
   tokens: List(PositionToken),
-  codegen_types: List(CodegenType),
-) -> List(CodegenType) {
+  derived_types: List(DerivedType),
+) -> List(DerivedType) {
   case tokens {
     [#(token.CommentDoc(docstring), start), ..tokens] -> {
       let #(tokens, docstring) = parse_docstring(tokens, docstring)
-      case parse_documented_if_codegen_type(tokens, docstring, start) {
+      case parse_documented_if_derived_type(tokens, docstring, start) {
         Ok(TokenResponse(tokens, custom_type)) ->
-          parse_loop(tokens, list.prepend(codegen_types, custom_type))
+          parse_loop(tokens, list.prepend(derived_types, custom_type))
         Error(TokenResponse(tokens, IgnoredToken)) ->
-          parse_loop(tokens, codegen_types)
+          parse_loop(tokens, derived_types)
         Error(TokenResponse([], UnexpectedToken)) -> {
           io.println("Warning: Encountered unexpected end of file")
-          codegen_types
+          derived_types
         }
         Error(TokenResponse([#(token, position), ..], UnexpectedToken)) -> {
           io.println(
@@ -104,29 +104,29 @@ fn parse_loop(
             <> " at byte offset "
             <> position.byte_offset |> int.to_string,
           )
-          codegen_types
+          derived_types
         }
       }
     }
-    [_, ..tokens] -> parse_loop(tokens, codegen_types)
-    [] -> codegen_types
+    [_, ..tokens] -> parse_loop(tokens, derived_types)
+    [] -> derived_types
   }
 }
 
 /// Parse a documented entity, returning it only if the wrapped entity is a custom type
-/// with a !codegen_type() entry.
-fn parse_documented_if_codegen_type(
+/// with a !derived() entry.
+fn parse_documented_if_derived_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
-) -> ParseResult(CodegenType) {
-  case extract_codegen_module(docstring) {
-    Ok(codegen_module) ->
-      maybe_parse_codegen_type(
+) -> ParseResult(DerivedType) {
+  case extract_derived_module(docstring) {
+    Ok(derived_module) ->
+      maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        codegen_module,
+        derived_module,
         [],
         Private,
         False,
@@ -136,45 +136,45 @@ fn parse_documented_if_codegen_type(
 }
 
 /// Parse an entity that may be a CustomType or may be something else
-fn maybe_parse_codegen_type(
+fn maybe_parse_derived_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
-  codegen_module: String,
+  derived_module: String,
   attributes: List(Attribute),
   publicity: Publicity,
   opaque_: Bool,
-) -> ParseResult(CodegenType) {
+) -> ParseResult(DerivedType) {
   case tokens {
     [#(token.At, _), ..tokens] -> {
       use TokenResponse(tokens, attribute) <- result.try(parse_attribute(tokens))
-      maybe_parse_codegen_type(
+      maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        codegen_module,
+        derived_module,
         [attribute, ..attributes],
         publicity,
         opaque_,
       )
     }
     [#(token.Pub, _), ..tokens] -> {
-      maybe_parse_codegen_type(
+      maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        codegen_module,
+        derived_module,
         attributes,
         Public,
         opaque_,
       )
     }
     [#(token.Opaque, _), ..tokens] -> {
-      maybe_parse_codegen_type(
+      maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        codegen_module,
+        derived_module,
         attributes,
         publicity,
         True,
@@ -184,14 +184,14 @@ fn maybe_parse_codegen_type(
       parse_type(tokens)
       |> map_parse_result(fn(type_and_pos) {
         let #(parsed_type, end_pos) = type_and_pos
-        CodegenType(
+        DerivedType(
           span: #(docstring_start.byte_offset, end_pos),
           docstring: docstring,
           attributes: attributes |> list.reverse,
           publicity:,
           opaque_:,
           parsed_type:,
-          codegen_module:,
+          derived_module:,
         )
       })
     }
@@ -538,12 +538,11 @@ fn map_parse_result(
   Ok(TokenResponse(tokens, mapper(value)))
 }
 
-/// Return the module inside parens in a magic !codegen_type(return/this)
+/// Return the module inside parens in a magic !derived(return/this)
 /// substring of the string. If the magic string occurs multiple times,
 /// return the *last* instance (closest to the definition below the docstring)
-fn extract_codegen_module(string: String) -> Result(String, Nil) {
-  let assert Ok(re) =
-    regexp.from_string("!codegen_type\\(([a-z][a-z_/]*)\\)\\s*$")
+fn extract_derived_module(string: String) -> Result(String, Nil) {
+  let assert Ok(re) = regexp.from_string("!derived\\(([a-z][a-z_/]*)\\)\\s*$")
 
   let matches = regexp.scan(re, string) |> list.reverse
 
@@ -552,7 +551,7 @@ fn extract_codegen_module(string: String) -> Result(String, Nil) {
     [] -> Error(Nil)
     _ ->
       panic as {
-        "Unexpected regexp match parsing " <> string <> " for !codegen_type"
+        "Unexpected regexp match parsing " <> string <> " for !derived"
       }
   }
 }
