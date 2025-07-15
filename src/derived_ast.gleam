@@ -36,7 +36,7 @@ pub type DerivedType {
     publicity: Publicity,
     opaque_: Bool,
     parsed_type: Type,
-    derived_modules: List(String),
+    derived_names: List(String),
   )
 }
 
@@ -120,13 +120,13 @@ fn parse_documented_if_derived_type(
   docstring: String,
   docstring_start: glexer.Position,
 ) -> ParseResult(DerivedType) {
-  case extract_derived_modules(docstring) {
-    Ok(derived_modules) ->
+  case extract_derived_names(docstring) {
+    Ok(derived_names) ->
       maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_modules,
+        derived_names,
         [],
         Private,
         False,
@@ -140,7 +140,7 @@ fn maybe_parse_derived_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
-  derived_modules: List(String),
+  derived_names: List(String),
   attributes: List(Attribute),
   publicity: Publicity,
   opaque_: Bool,
@@ -152,7 +152,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_modules,
+        derived_names,
         [attribute, ..attributes],
         publicity,
         opaque_,
@@ -163,7 +163,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_modules,
+        derived_names,
         attributes,
         Public,
         opaque_,
@@ -174,7 +174,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_modules,
+        derived_names,
         attributes,
         publicity,
         True,
@@ -191,7 +191,7 @@ fn maybe_parse_derived_type(
           publicity:,
           opaque_:,
           parsed_type:,
-          derived_modules:,
+          derived_names:,
         )
       })
     }
@@ -540,7 +540,7 @@ fn map_parse_result(
 
 /// Return all modules inside parens in magic !derived(return/this)
 /// substrings of the string. Returns them in the order they appear.
-fn extract_derived_modules(string: String) -> Result(List(String), Nil) {
+fn extract_derived_names(string: String) -> Result(List(String), Nil) {
   let assert Ok(re) = regexp.from_string("!derived\\(([a-z][a-z_/]*)\\)")
 
   let matches = regexp.scan(re, string)
