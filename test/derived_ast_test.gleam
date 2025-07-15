@@ -198,7 +198,9 @@ pub fn parse_variant_with_multiple_unlabellled_field_test() {
               derived_ast.UnlabelledField(
                 derived_ast.NamedType("String", option.None, []),
               ),
-              derived_ast.UnlabelledField(derived_ast.NamedType("Int", option.None, [])),
+              derived_ast.UnlabelledField(
+                derived_ast.NamedType("Int", option.None, []),
+              ),
               derived_ast.UnlabelledField(
                 derived_ast.NamedType("Bool", option.None, []),
               ),
@@ -675,7 +677,11 @@ pub fn parse_multiple_deriveds_test() {
           derived_ast.Variant(
             "Bar",
             "",
-            [derived_ast.UnlabelledField(derived_ast.NamedType("Int", option.None, []))],
+            [
+              derived_ast.UnlabelledField(
+                derived_ast.NamedType("Int", option.None, []),
+              ),
+            ],
             [],
           ),
         ]),
@@ -762,7 +768,9 @@ pub fn parse_variant_with_deprecated_attribute_test() {
         derived_ast.Private,
         False,
         derived_ast.Type("Foo", [], [
-          derived_ast.Variant("Bar", "", [], [derived_ast.Deprecated("use baz instead")]),
+          derived_ast.Variant("Bar", "", [], [
+            derived_ast.Deprecated("use baz instead"),
+          ]),
         ]),
         ["foobar"],
       ),
