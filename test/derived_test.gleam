@@ -82,7 +82,7 @@ pub fn parse_empty_private_derived_test() {
         derived.Private,
         False,
         derived.Type("Foo", [], []),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -107,7 +107,7 @@ pub fn parse_single_empty_variant_derived_test() {
         derived.Private,
         False,
         derived.Type("Foo", [], [derived.Variant("Foo", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -135,7 +135,7 @@ pub fn parse_single_empty_variant_with_docstring_test() {
         derived.Type("Foo", [], [
           derived.Variant("Foo", " A Foo does foo things", [], []),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -166,7 +166,7 @@ pub fn parse_multiple_empty_variants_with_docstring_test() {
           derived.Variant("Foo", " A Foo does foo things", [], []),
           derived.Variant("Bar", " A Bar does bar things", [], []),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -206,7 +206,7 @@ pub fn parse_variant_with_multiple_unlabellled_field_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -246,7 +246,7 @@ pub fn parse_variant_with_multiple_labelled_field_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -287,7 +287,7 @@ pub fn parse_variant_with_nested_tuple_field_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -324,7 +324,7 @@ pub fn parse_variant_with_parameterized_field_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -360,7 +360,7 @@ pub fn parse_variant_with_zero_parameter_function_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -402,7 +402,7 @@ pub fn parse_variant_with_mixed_fields_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -439,7 +439,7 @@ pub fn parse_variant_with_module_qualified_parameterized_field_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -496,7 +496,7 @@ pub fn parse_multiple_variants_with_fields_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -537,7 +537,7 @@ pub fn parse_variant_with_function_taking_tuple_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -578,7 +578,7 @@ pub fn parse_variant_with_tuple_containing_function_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -621,7 +621,7 @@ pub fn parse_variant_with_complex_parameterized_types_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -663,7 +663,7 @@ pub fn parse_multiple_deriveds_test() {
             [],
           ),
         ]),
-        "module_a",
+        ["module_a"],
       ),
       derived.DerivedType(
         #(79, 148),
@@ -679,7 +679,7 @@ pub fn parse_multiple_deriveds_test() {
             [],
           ),
         ]),
-        "module_b",
+        ["module_b"],
       ),
     ]
 }
@@ -706,7 +706,7 @@ pub fn parse_docstring_with_multiple_derived_annotations_test() {
         derived.Private,
         False,
         derived.Type("Foo", [], [derived.Variant("Foo", "", [], [])]),
-        "second_module",
+        ["first_module", "second_module"],
       ),
     ]
 }
@@ -737,7 +737,7 @@ pub fn parse_parameterized_type_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -764,7 +764,7 @@ pub fn parse_variant_with_deprecated_attribute_test() {
         derived.Type("Foo", [], [
           derived.Variant("Bar", "", [], [derived.Deprecated("use baz instead")]),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -789,7 +789,7 @@ pub fn parse_type_with_deprecated_attribute_test() {
         derived.Private,
         False,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -820,7 +820,7 @@ pub fn parse_type_with_multiple_attributes_test() {
         derived.Private,
         False,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -844,7 +844,7 @@ pub fn parse_public_type_test() {
         derived.Public,
         False,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -868,7 +868,7 @@ pub fn parse_public_opaque_type_test() {
         derived.Public,
         True,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -893,7 +893,7 @@ pub fn parse_attributed_public_type_test() {
         derived.Public,
         False,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -918,7 +918,7 @@ pub fn parse_attributed_public_opaque_type_test() {
         derived.Public,
         True,
         derived.Type("Foo", [], [derived.Variant("Bar", "", [], [])]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }
@@ -956,7 +956,7 @@ pub fn parse_multiple_type_parameters_test() {
             [],
           ),
         ]),
-        "foobar",
+        ["foobar"],
       ),
     ]
 }

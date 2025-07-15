@@ -36,7 +36,7 @@ pub type DerivedType {
     publicity: Publicity,
     opaque_: Bool,
     parsed_type: Type,
-    derived_module: String,
+    derived_modules: List(String),
   )
 }
 
@@ -120,13 +120,13 @@ fn parse_documented_if_derived_type(
   docstring: String,
   docstring_start: glexer.Position,
 ) -> ParseResult(DerivedType) {
-  case extract_derived_module(docstring) {
-    Ok(derived_module) ->
+  case extract_derived_modules(docstring) {
+    Ok(derived_modules) ->
       maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_module,
+        derived_modules,
         [],
         Private,
         False,
@@ -140,7 +140,7 @@ fn maybe_parse_derived_type(
   tokens: List(PositionToken),
   docstring: String,
   docstring_start: glexer.Position,
-  derived_module: String,
+  derived_modules: List(String),
   attributes: List(Attribute),
   publicity: Publicity,
   opaque_: Bool,
@@ -152,7 +152,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_module,
+        derived_modules,
         [attribute, ..attributes],
         publicity,
         opaque_,
@@ -163,7 +163,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_module,
+        derived_modules,
         attributes,
         Public,
         opaque_,
@@ -174,7 +174,7 @@ fn maybe_parse_derived_type(
         tokens,
         docstring,
         docstring_start,
-        derived_module,
+        derived_modules,
         attributes,
         publicity,
         True,
@@ -191,7 +191,7 @@ fn maybe_parse_derived_type(
           publicity:,
           opaque_:,
           parsed_type:,
-          derived_module:,
+          derived_modules:,
         )
       })
     }
@@ -538,20 +538,22 @@ fn map_parse_result(
   Ok(TokenResponse(tokens, mapper(value)))
 }
 
-/// Return the module inside parens in a magic !derived(return/this)
-/// substring of the string. If the magic string occurs multiple times,
-/// return the *last* instance (closest to the definition below the docstring)
-fn extract_derived_module(string: String) -> Result(String, Nil) {
-  let assert Ok(re) = regexp.from_string("!derived\\(([a-z][a-z_/]*)\\)\\s*$")
+/// Return all modules inside parens in magic !derived(return/this)
+/// substrings of the string. Returns them in the order they appear.
+fn extract_derived_modules(string: String) -> Result(List(String), Nil) {
+  let assert Ok(re) = regexp.from_string("!derived\\(([a-z][a-z_/]*)\\)")
 
-  let matches = regexp.scan(re, string) |> list.reverse
+  let matches = regexp.scan(re, string)
 
   case matches {
-    [regexp.Match(_, [option.Some(name)]), ..] -> Ok(name)
     [] -> Error(Nil)
-    _ ->
-      panic as {
-        "Unexpected regexp match parsing " <> string <> " for !derived"
-      }
+    _ -> {
+      let modules =
+        list.map(matches, fn(match) {
+          let assert regexp.Match(_, [option.Some(name)]) = match
+          name
+        })
+      Ok(modules)
+    }
   }
 }
