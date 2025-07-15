@@ -110,6 +110,8 @@ gleam test  # Run the tests
 
 - **Why not use [glance](https://hexdocs.pm/glance/glance.html)**?
 
+You should!
+
 I wrote this because glance doesn't currently support docstrings in types.
 [Issue here](https://github.com/lpil/glance/issues/2) When that issue is
 closed, I'll switch this project to use Glance and remove the AST module.
