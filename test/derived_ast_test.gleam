@@ -932,3 +932,28 @@ pub fn parse_multiple_type_parameters_test() {
       ),
     ])
 }
+
+pub fn parse_type_with_comment_test() {
+  let custom_types =
+    "
+  /// !derived(foobar)
+  type Foo {
+    Foo()
+    // There will be more variants 
+  }
+  "
+    |> ast.parse
+
+  assert custom_types
+    == Ok([
+      ast.DerivedType(
+        #(3, 85),
+        " !derived(foobar)",
+        [],
+        ast.Private,
+        False,
+        ast.Type("Foo", [], [ast.Variant("Foo", "", [], [])]),
+        ["foobar"],
+      ),
+    ])
+}

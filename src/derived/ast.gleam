@@ -233,6 +233,8 @@ fn parse_variants(
       parse_variants(tokens, reversed_variants)
     [#(token.RightBrace, position), ..tokens] ->
       Ok(TokenResponse(tokens, #(reversed_variants, position.byte_offset)))
+    [#(token.CommentNormal(_), _), ..tokens] ->
+      parse_variants(tokens, reversed_variants)
     tokens -> {
       use TokenResponse(tokens, variant) <- result.try(
         parse_maybe_documented_variant(tokens),
