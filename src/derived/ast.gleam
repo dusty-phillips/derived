@@ -1,5 +1,3 @@
-import gleam/int
-import gleam/io
 import gleam/list
 import gleam/option.{type Option}
 import gleam/regexp
@@ -11,16 +9,18 @@ import glexer/token
 /// including their docstrings.
 ///
 /// All other syntaxes (including invalid syntaxes) are ignored
-pub fn parse(input: String) -> List(DerivedType) {
+pub fn parse(input: String) -> Result(List(DerivedType), ParseError) {
   input
   |> glexer.new()
   |> glexer.discard_whitespace()
   |> glexer.lex()
   |> parse_loop([])
-  |> list.reverse
+  |> result.map(list.reverse)
 }
 
 pub type ParseError {
+  /// Encountered end of file while expecting another token
+  UnexpectedEndOfFile
   /// Encountered an unexpected token while parsing a derived type
   UnexpectedToken
   /// Encountered an unexpected token in a place where unknown tokens
@@ -84,7 +84,7 @@ pub type FieldType {
 fn parse_loop(
   tokens: List(PositionToken),
   derived_types: List(DerivedType),
-) -> List(DerivedType) {
+) -> Result(List(DerivedType), ParseError) {
   case tokens {
     [#(token.CommentDoc(docstring), start), ..tokens] -> {
       let #(tokens, docstring) = parse_docstring(tokens, docstring)
@@ -93,23 +93,17 @@ fn parse_loop(
           parse_loop(tokens, list.prepend(derived_types, custom_type))
         Error(TokenResponse(tokens, IgnoredToken)) ->
           parse_loop(tokens, derived_types)
-        Error(TokenResponse([], UnexpectedToken)) -> {
-          io.println("Warning: Encountered unexpected end of file")
-          derived_types
+        Error(TokenResponse([], UnexpectedToken))
+        | Error(TokenResponse(_, UnexpectedEndOfFile)) -> {
+          Error(UnexpectedEndOfFile)
         }
-        Error(TokenResponse([#(token, position), ..], UnexpectedToken)) -> {
-          io.println(
-            "Encountered unexpected token: "
-            <> glexer.to_source([#(token, position)])
-            <> " at byte offset "
-            <> position.byte_offset |> int.to_string,
-          )
-          derived_types
+        Error(TokenResponse(_, UnexpectedToken)) -> {
+          Error(UnexpectedToken)
         }
       }
     }
     [_, ..tokens] -> parse_loop(tokens, derived_types)
-    [] -> derived_types
+    [] -> Ok(derived_types)
   }
 }
 

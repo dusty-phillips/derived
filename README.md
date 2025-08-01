@@ -38,7 +38,7 @@ pub type User {
 }
 "
 
-  let result =
+  let assert Ok(result) =
     derived.generate(example_types, "json_schema", generate_json_schema)
   io.println(result)
 }

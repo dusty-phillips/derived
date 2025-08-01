@@ -4,34 +4,44 @@ import gleam/regexp
 import gleam/result
 import gleam/string
 
-pub fn parse(input: String) {
+pub type GenerateError(a) {
+  ParseError(ast.ParseError)
+  GenerationError(a)
+}
+
+pub fn parse(input: String) -> Result(List(ast.DerivedType), ast.ParseError) {
   ast.parse(input)
 }
 
 pub fn generate(
   input: String,
   derived_name: String,
-  callback: fn(ast.DerivedType) -> Result(String, Nil),
-) -> String {
-  let derived_types =
-    input
-    |> parse
+  callback: fn(ast.DerivedType) -> Result(String, a),
+) -> Result(String, GenerateError(a)) {
+  use derived_types <- result.try(parse(input) |> result.map_error(ParseError))
+  let filtered_types =
+    derived_types
     |> list.filter(fn(derived_type) {
       derived_type.derived_names |> list.contains(derived_name)
     })
     |> list.reverse
 
-  use modified_source, derived_type <- list.fold(derived_types, input)
-
-  derived_type
-  |> callback
-  |> result.map(create_derived_content(
-    _,
-    derived_name,
-    modified_source,
-    derived_type,
-  ))
-  |> result.unwrap(modified_source)
+  list.fold_until(filtered_types, Ok(input), fn(current, derived_type) {
+    // safe because fold_until stops if it is an error
+    let assert Ok(source) = current
+    case callback(derived_type) {
+      Ok(generated_section) ->
+        list.Continue(
+          Ok(create_derived_content(
+            generated_section,
+            derived_name,
+            source,
+            derived_type,
+          )),
+        )
+      Error(error) -> list.Stop(Error(GenerationError(error)))
+    }
+  })
 }
 
 fn create_derived_content(
@@ -47,7 +57,12 @@ fn create_derived_content(
     <> "\n"
     <> end_marker(derived_name, derived_type.parsed_type.name)
 
-  find_and_replace_markers(source, derived_name, derived_type.parsed_type.name, new_content)
+  find_and_replace_markers(
+    source,
+    derived_name,
+    derived_type.parsed_type.name,
+    new_content,
+  )
   |> result.lazy_unwrap(fn() {
     insert_after_type(source, derived_type, new_content)
   })
@@ -60,7 +75,9 @@ fn find_and_replace_markers(
   new_content: String,
 ) -> Result(String, Nil) {
   let pattern =
-    start_marker(derived_name, type_name) <> "[\\s\\S]*?" <> end_marker(derived_name, type_name)
+    start_marker(derived_name, type_name)
+    <> "[\\s\\S]*?"
+    <> end_marker(derived_name, type_name)
 
   case
     regexp.compile(
@@ -91,7 +108,11 @@ fn insert_after_type(
 }
 
 fn start_marker(derived_name: String, type_name: String) -> String {
-  "// ---- BEGIN DERIVED " <> derived_name <> " for " <> type_name <> " DO NOT MODIFY ---- //"
+  "// ---- BEGIN DERIVED "
+  <> derived_name
+  <> " for "
+  <> type_name
+  <> " DO NOT MODIFY ---- //"
 }
 
 fn end_marker(derived_name: String, type_name: String) -> String {
