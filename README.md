@@ -19,10 +19,93 @@ generators for serialization, validation, documentation, and more.
 ## Quick Start
 
 ```sh
-gleam add derived@1
+gleam add derived
+```
+
+### Code Generation
+
+```gleam
+pub fn main() -> Nil {
+  let example_types =
+    "
+/// A simple user type
+/// !derived(json_schema)
+pub type User {
+  /// A regular user account
+  User(name: String, age: Int, email: String)
+  /// An admin user account
+  Admin(name: String, permissions: List(String))
+}
+"
+
+  let result =
+    derived.generate(example_types, "json_schema", generate_json_schema)
+  io.println(result)
+}
+
+fn generate_json_schema(derived_type: ast.DerivedType) -> Result(String, Nil) {
+  let schema = build_json_schema(derived_type.parsed_type)
+  Ok(
+    "const "
+    <> string.lowercase(derived_type.parsed_type.name)
+    <> "_schema = \""
+    <> escape_gleam_string(schema)
+    <> "\"",
+  )
+}
+```
+
+The output of this function is the same input that has a new string with a json
+schema embedded in it:
+
+```gleam
+/// A simple user type
+/// !derived(json_schema)
+pub type User {
+  /// A regular user account
+  User(name: String, age: Int, email: String)
+  /// An admin user account
+  Admin(name: String, permissions: List(String))
+}
+
+// ---- BEGIN DERIVED json_schema for User DO NOT MODIFY ---- //
+const user_schema = "{
+  \"type\": \"object\",
+  \"title\": \"User\",
+  \"oneOf\": [
+    {
+      \"type\": \"object\",
+      \"title\": \"User\",
+      \"description\": \"A regular user account\",
+      \"properties\": {
+        \"type\": { \"const\": \"User\" },
+        \"name\": { \"type\": \"string\" },
+        \"age\": { \"type\": \"integer\" },
+        \"email\": { \"type\": \"string\" }
+      },
+      \"required\": [\"type\", \"name\", \"age\", \"email\"]
+    },
+    {
+      \"type\": \"object\",
+      \"title\": \"Admin\",
+      \"description\": \"An admin user account\",
+      \"properties\": {
+        \"type\": { \"const\": \"Admin\" },
+        \"name\": { \"type\": \"string\" },
+        \"permissions\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }
+      },
+      \"required\": [\"type\", \"name\", \"permissions\"]
+    }
+  ]
+}"
+// ---- END DERIVED json_schema for User //
 ```
 
 ### Basic Parsing
+
+If you need more control over what happens after the AST has been parsed, you
+can use the `parse` function, which returns a list of DerivedType records that
+you can introspect as you see fit:
 
 ```gleam
 import derived
@@ -40,55 +123,6 @@ pub fn main() -> Nil {
   // Returns a list of DerivedType records containing parsed type information
 }
 ```
-
-### Code Generation
-
-```gleam
-import derived
-import derived/ast
-import gleam/list
-import gleam/string
-
-pub fn main() -> Nil {
-  let source = "
-    /// User type
-    /// !derived(json_schema)
-    pub type User {
-      /// A regular user account
-      User(name: String, age: Int)
-      /// An admin user account
-      Admin(name: String, permissions: List(String))
-    }
-  "
-
-  let result = derived.generate(source, generate_json_schema)
-  // Returns source with generated JSON schema inserted
-}
-
-fn generate_json_schema(derived_type: ast.DerivedType) -> Result(String, Nil) {
-  case list.contains(derived_type.derived_names, "json_schema") {
-    True -> {
-      let schema = build_json_schema(derived_type.parsed_type)
-      Ok(
-        "const "
-        <> string.lowercase(derived_type.parsed_type.name)
-        <> "_schema = "
-        <> schema
-        <> ";",
-      )
-    }
-    False -> Error(Nil)
-  }
-}
-```
-
-## How it works
-
-1. **Mark types**: Add `!derived(generator_name)` to type docstrings
-2. **Parse or generate**: Use `derived.parse()` for inspection or
-   `derived.generate()` for code generation
-3. **Process results**: Work with parsed type information or insert generated
-   code
 
 ## Examples
 
@@ -139,8 +173,11 @@ and what use cases it can solve.
 
 - **What should I use this for?**
 
+Anywhere you want to generate code based on types. Some ideas I've had:
+
 - Generating serializers and deserializers to various formats.
 - Generating a [glint](https://hexdocs.pm/glint/index.html) CLI parser based
   solely on an input type.
 - Generating schemas for various protocols.
 - Generating stubs for wisp handlers or lustre clients
+- Generating specialty hashing functions

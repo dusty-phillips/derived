@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `gleam test` - Runs all tests in the `test/` directory
 - Tests use the gleeunit framework and follow the `*_test.gleam` naming pattern
 - Use the echo keyword (as in `echo some_value`) for debugging
+- Use the `#echo` keyword as in `echo some_obj` or `some_obj |> echo` to debug some_obj. There is no `io.debug`.
 
 ## Project Architecture
 

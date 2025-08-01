@@ -26,24 +26,20 @@ type Product {
 }
 "
 
-  let result = derived.generate(example_types, generate_json_schema)
+  let result =
+    derived.generate(example_types, "json_schema", generate_json_schema)
   io.println(result)
 }
 
 fn generate_json_schema(derived_type: ast.DerivedType) -> Result(String, Nil) {
-  case list.contains(derived_type.derived_names, "json_schema") {
-    True -> {
-      let schema = build_json_schema(derived_type.parsed_type)
-      Ok(
-        "const "
-        <> string.lowercase(derived_type.parsed_type.name)
-        <> "_schema = "
-        <> schema
-        <> ";",
-      )
-    }
-    False -> Error(Nil)
-  }
+  let schema = build_json_schema(derived_type.parsed_type)
+  Ok(
+    "const "
+    <> string.lowercase(derived_type.parsed_type.name)
+    <> "_schema = \""
+    <> escape_gleam_string(schema)
+    <> "\"",
+  )
 }
 
 fn build_json_schema(type_def: ast.Type) -> String {
@@ -144,6 +140,12 @@ fn escape_json_string(input: String) -> String {
   |> string.replace("\n", "\\n")
   |> string.replace("\r", "\\r")
   |> string.replace("\t", "\\t")
+}
+
+fn escape_gleam_string(input: String) -> String {
+  input
+  |> string.replace("\\", "\\\\")
+  |> string.replace("\"", "\\\"")
 }
 
 fn add_description(docstring: String) -> String {

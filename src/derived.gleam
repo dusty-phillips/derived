@@ -10,26 +10,28 @@ pub fn parse(input: String) {
 
 pub fn generate(
   input: String,
+  derived_name: String,
   callback: fn(ast.DerivedType) -> Result(String, Nil),
 ) -> String {
-  let derived_types = input |> parse |> list.reverse
+  let derived_types =
+    input
+    |> parse
+    |> list.filter(fn(derived_type) {
+      derived_type.derived_names |> list.contains(derived_name)
+    })
+    |> list.reverse
 
-  use source_after_types, derived_type <- list.fold(derived_types, input)
-
-  use source_after_derivations, derived_name <- list.fold(
-    derived_type.derived_names |> list.reverse,
-    source_after_types,
-  )
+  use modified_source, derived_type <- list.fold(derived_types, input)
 
   derived_type
   |> callback
   |> result.map(create_derived_content(
     _,
     derived_name,
-    source_after_derivations,
+    modified_source,
     derived_type,
   ))
-  |> result.unwrap(source_after_derivations)
+  |> result.unwrap(modified_source)
 }
 
 fn create_derived_content(
@@ -39,13 +41,13 @@ fn create_derived_content(
   derived_type: ast.DerivedType,
 ) -> String {
   let new_content =
-    start_marker(derived_name)
+    start_marker(derived_name, derived_type.parsed_type.name)
     <> "\n"
     <> generated_code
     <> "\n"
-    <> end_marker(derived_name)
+    <> end_marker(derived_name, derived_type.parsed_type.name)
 
-  find_and_replace_markers(source, derived_name, new_content)
+  find_and_replace_markers(source, derived_name, derived_type.parsed_type.name, new_content)
   |> result.lazy_unwrap(fn() {
     insert_after_type(source, derived_type, new_content)
   })
@@ -54,10 +56,11 @@ fn create_derived_content(
 fn find_and_replace_markers(
   source: String,
   derived_name: String,
+  type_name: String,
   new_content: String,
 ) -> Result(String, Nil) {
   let pattern =
-    start_marker(derived_name) <> "[\\s\\S]*?" <> end_marker(derived_name)
+    start_marker(derived_name, type_name) <> "[\\s\\S]*?" <> end_marker(derived_name, type_name)
 
   case
     regexp.compile(
@@ -87,10 +90,10 @@ fn insert_after_type(
   before <> "\n\n" <> content <> after
 }
 
-fn start_marker(derived_name: String) -> String {
-  "// ---- BEGIN DERIVED " <> derived_name <> " DO NOT MODIFY ---- //"
+fn start_marker(derived_name: String, type_name: String) -> String {
+  "// ---- BEGIN DERIVED " <> derived_name <> " for " <> type_name <> " DO NOT MODIFY ---- //"
 }
 
-fn end_marker(derived_name: String) -> String {
-  "// ---- END DERIVED " <> derived_name <> " //"
+fn end_marker(derived_name: String, type_name: String) -> String {
+  "// ---- END DERIVED " <> derived_name <> " for " <> type_name <> " //"
 }
