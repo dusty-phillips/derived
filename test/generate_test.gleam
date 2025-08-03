@@ -426,3 +426,39 @@ type Foo {
 ",
     )
 }
+
+pub fn generate_identical_replacement_content_test() {
+  let source =
+    "
+/// A derived type
+/// !derived(test_module)
+type Foo {
+  Bar
+}
+
+// ---- BEGIN DERIVED test_module for Foo DO NOT MODIFY ---- //
+same content
+// ---- END DERIVED test_module for Foo //
+"
+
+  // Generate with identical content - should replace, not duplicate
+  let result =
+    derived.generate(source, "test_module", fn(_derived_type) {
+      Ok("same content")
+    })
+
+  assert result
+    == Ok(
+      "
+/// A derived type
+/// !derived(test_module)
+type Foo {
+  Bar
+}
+
+// ---- BEGIN DERIVED test_module for Foo DO NOT MODIFY ---- //
+same content
+// ---- END DERIVED test_module for Foo //
+",
+    )
+}

@@ -77,19 +77,15 @@ fn find_and_replace_markers(
     <> "[\\s\\S]*?"
     <> end_marker(derived_name, type_name)
 
-  case
+  let assert Ok(regex) =
     regexp.compile(
       pattern,
       regexp.Options(case_insensitive: False, multi_line: True),
     )
-  {
-    Ok(regex) -> {
-      case regexp.replace(regex, source, new_content) {
-        result if result != source -> Ok(result)
-        _ -> Error(Nil)
-      }
-    }
-    Error(_) -> Error(Nil)
+
+  case regexp.check(regex, source) {
+    True -> Ok(regexp.replace(regex, source, new_content))
+    False -> Error(Nil)
   }
 }
 
