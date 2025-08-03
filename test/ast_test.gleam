@@ -957,3 +957,29 @@ pub fn parse_type_with_comment_test() {
       ),
     ])
 }
+
+pub fn parse_error_invalid_syntax_test() {
+  let source =
+    "
+/// A type with invalid syntax
+/// !derived(test_module)
+type Foo {
+  Bar(incomplete field definition
+"
+
+  let result = ast.parse(source)
+
+  assert result == Error(ast.UnexpectedEndOfFile)
+}
+
+pub fn parse_error_unexpected_end_of_file_test() {
+  let source =
+    "
+/// A type that ends abruptly
+/// !derived(test_module)
+type"
+
+  let result = ast.parse(source)
+
+  assert result == Error(ast.UnexpectedEndOfFile)
+}
